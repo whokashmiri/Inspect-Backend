@@ -6,27 +6,30 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── User ────────────────────────────────────────────────────────────────
 model User {
   id            String         @id @default(uuid())
   email         String         @unique
+  fullName      String         @default("Unknown")  
+  role          String         @default("Manager")  
   passwordHash  String         @map("password_hash")
   createdAt     DateTime       @default(now()) @map("created_at")
   refreshTokens RefreshToken[]
   company       Company?
-
-  @@map("users")
 }
 
+// ─── Company ─────────────────────────────────────────────────────────────
 model Company {
   id        String   @id @default(uuid())
-  name      String   @map("name")
-  userId    String   @unique @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade) // ✅ relation defined here
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("companies")
 }
 
+// ─── RefreshToken ─────────────────────────────────────────────────────────
 model RefreshToken {
   id        String   @id @default(uuid())
   token     String   @unique

@@ -7,6 +7,8 @@ export const userRepository = {
       select: {
         id: true,
         email: true,
+        fullName: true,            // ✅ added
+        role: true,                // ✅ added
         passwordHash: true,
         company: { select: { name: true } },
       },
@@ -19,22 +21,28 @@ export const userRepository = {
       select: {
         id: true,
         email: true,
+        fullName: true,            // ✅ added
+        role: true,                // ✅ added
         createdAt: true,
         company: { select: { name: true } },
       },
     });
   },
 
-  async create({ email, passwordHash, companyName }) {
+  async create({ email, fullName, role, passwordHash, companyName }) {
     return prisma.user.create({
       data: {
         email,
+        fullName,                 // ✅ added
+        role,                     // ✅ added
         passwordHash,
         company: { create: { name: companyName } },
       },
       select: {
         id: true,
         email: true,
+        fullName: true,           // ✅ added
+        role: true,               // ✅ added
         createdAt: true,
         company: { select: { name: true } },
       },
