@@ -1,3 +1,5 @@
+// auth.controller.js
+
 import { authService } from "../../application/auth/auth.service.js";
 
 export const authController = {
@@ -33,3 +35,5 @@ export const authController = {
     res.status(204).send();
   },
 };
+
+

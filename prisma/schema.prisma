@@ -10,8 +10,8 @@ datasource db {
 model User {
   id            String         @id @default(uuid())
   email         String         @unique
-  fullName      String         @default("Unknown")  
-  role          String         @default("Manager")  
+  fullName      String           
+  role          String           
   passwordHash  String         @map("password_hash")
   createdAt     DateTime       @default(now()) @map("created_at")
   refreshTokens RefreshToken[]

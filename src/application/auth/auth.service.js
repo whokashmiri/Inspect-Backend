@@ -1,24 +1,35 @@
+// auth.service.js
+
 import bcrypt from "bcryptjs";
 import { userRepository } from "../../infrastructure/repositories/user.repo.js";
 import { tokenService } from "./token.service.js";
 import { AppError } from "../../utils/AppError.js";
 
 export const authService = {
-  async signup({ email, password, fullName, role, companyName }) {
-    const existing = await userRepository.findByEmail(email);
-    if (existing) throw new AppError("Email already in use", 409);
+ async signup({ email, password, fullName, role, companyName }) {
+  console.log("SIGNUP INPUT:", { email, fullName, role, companyName });
 
-    const passwordHash = await bcrypt.hash(password, 12);
-    const user = await userRepository.create({
-      email,
-      fullName,               // ✅ added
-      role,                   // ✅ added
-      passwordHash,
-      companyName,
-    });
+  if (!email?.trim()) throw new AppError("Email is required", 400);
+  if (!password?.trim()) throw new AppError("Password is required", 400);
+  if (!fullName?.trim()) throw new AppError("Full name is required", 400);
+  if (!role?.trim()) throw new AppError("Role is required", 400);
+  if (!companyName?.trim()) throw new AppError("Company name is required", 400);
 
-    return buildAuthResponse(user);
-  },
+  const existing = await userRepository.findByEmail(email);
+  if (existing) throw new AppError("Email already in use", 409);
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  const user = await userRepository.create({
+    email: email.trim(),
+    fullName: fullName.trim(),
+    role: role.trim(),
+    passwordHash,
+    companyName: companyName.trim(),
+  });
+
+  return buildAuthResponse(user);
+},
 
   async login({ email, password }) {
     const record = await userRepository.findByEmail(email);
@@ -81,3 +92,4 @@ function formatUser(user) {
     companyName: user.company?.name ?? null,
   };
 }
+
