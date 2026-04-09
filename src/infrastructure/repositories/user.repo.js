@@ -1,5 +1,3 @@
-// user.repo.js
-
 import prisma from "../prisma.js";
 
 export const userRepository = {
@@ -9,10 +7,10 @@ export const userRepository = {
       select: {
         id: true,
         email: true,
-        fullName: true,            // ✅ added
-        role: true,                // ✅ added
+        fullName: true,
+        role: true,
         passwordHash: true,
-        company: { select: { name: true } },
+        company: { select: { id: true, name: true } },
       },
     });
   },
@@ -23,33 +21,48 @@ export const userRepository = {
       select: {
         id: true,
         email: true,
-        fullName: true,            // ✅ added
-        role: true,                // ✅ added
+        fullName: true,
+        role: true,
         createdAt: true,
-        company: { select: { name: true } },
+        company: { select: { id: true, name: true } },
       },
     });
   },
 
-async create({ email, fullName, role, passwordHash, companyName }) {
-  return prisma.user.create({
-    data: {
-      email,
-      fullName,
-      role,
-      passwordHash,
-      company: { create: { name: companyName } },
-    },
-    select: {
-      id: true,
-      email: true,
-      fullName: true,
-      role: true,
-      createdAt: true,
-      company: { select: { name: true } },
-    },
-  });
-},
+  async findManagerByCompanyId(companyId) {
+    return prisma.user.findFirst({
+      where: {
+        companyId,
+        role: "Manager",
+      },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+      },
+    });
+  },
+
+  async create({ email, fullName, role, passwordHash, companyId }) {
+    return prisma.user.create({
+      data: {
+        email,
+        fullName,
+        role,
+        passwordHash,
+        companyId,
+      },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        createdAt: true,
+        company: { select: { id: true, name: true } },
+      },
+    });
+  },
 
   async saveRefreshToken(userId, token, expiresAt) {
     await prisma.refreshToken.create({
@@ -69,4 +82,3 @@ async create({ email, fullName, role, passwordHash, companyName }) {
     await prisma.refreshToken.deleteMany({ where: { userId } });
   },
 };
-
