@@ -16,6 +16,7 @@ model User {
   companyId     String?        @map("company_id")
   company       Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
   refreshTokens RefreshToken[]
+  projects      Project[]      @relation("ProjectCreatedBy")
 
   @@index([companyId])
 }
@@ -25,11 +26,29 @@ model Company {
   name      String   @unique
   createdAt DateTime @default(now()) @map("created_at")
   users     User[]
+  projects  Project[]
 
   @@map("companies")
 }
 
-// ─── RefreshToken ─────────────────────────────────────────────────────────
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  status      String   @default("New")
+  isFavorite  Boolean  @default(false) @map("is_favorite")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  companyId   String   @map("company_id")
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdById String   @map("created_by_id")
+  createdBy   User     @relation("ProjectCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([createdById])
+  @@map("projects")
+}
+
 model RefreshToken {
   id        String   @id @default(uuid())
   token     String   @unique

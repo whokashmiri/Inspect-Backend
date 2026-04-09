@@ -1,3 +1,6 @@
+
+
+// validate.middleware.js
 import { AppError } from "../../utils/AppError.js";
 
 export function validate(schema) {

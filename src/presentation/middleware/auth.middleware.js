@@ -1,3 +1,4 @@
+// auth.middleware.js
 import { tokenService } from "../../application/auth/token.service.js";
 import { AppError } from "../../utils/AppError.js";
 
