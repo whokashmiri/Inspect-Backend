@@ -18,3 +18,19 @@ export const loginSchema = z.object({
 export const refreshSchema = z.object({
   refreshToken: z.string().min(1, "Refresh token is required"),
 });
+
+
+export const createFolderSchema = z.object({
+  name: z.string().min(1, "Folder name is required"),
+  parentId: z.string().uuid("Invalid parentId").optional().nullable(),
+});
+
+export const createAssetSchema = z.object({
+  name: z.string().trim().min(1, "Asset name is required"),
+  serialNumber: z.string().trim().min(1, "Serial number is required"),
+  writtenDescription: z.string().trim().optional().nullable(),
+  folderId: z
+    .union([z.string().uuid("Invalid folderId"), z.literal(""), z.null()])
+    .optional()
+    .transform((value) => (value === "" ? null : value)),
+});

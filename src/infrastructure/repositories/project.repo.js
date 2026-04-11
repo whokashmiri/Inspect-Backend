@@ -89,4 +89,29 @@ export const projectRepository = {
       },
     });
   },
+
+  async findById(id) {
+    return prisma.project.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        companyId: true,
+        createdById: true,
+        company: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    });
+  },
 };
