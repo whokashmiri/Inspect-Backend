@@ -148,7 +148,11 @@ async function buildAuthResponse(user) {
 
   return {
     user: formatUser(user),
-    tokens: { accessToken, refreshToken },
+    tokens: {
+      accessToken,
+      refreshToken,
+      refreshExpiresAt: expiresAt.toISOString(),
+    },
   };
 }
 
