@@ -20,17 +20,25 @@ export const refreshSchema = z.object({
 });
 
 
+const offlineIdSchema = z
+  .string()
+  .regex(/^(?:offline_[A-Za-z0-9_-]+|[0-9a-fA-F]{24})$/, {
+    message: "Invalid id format",
+  });
+
+const optionalOfflineId = z
+  .union([offlineIdSchema, z.literal(""), z.null()])
+  .optional()
+  .transform((value) => (value === "" || value === null ? null : value ?? null));
+
 export const createFolderSchema = z.object({
   name: z.string().min(1, "Folder name is required"),
-  parentId: z.string().uuid("Invalid parentId").optional().nullable(),
+  parentId: optionalOfflineId,
 });
 
 export const createAssetSchema = z.object({
   name: z.string().trim().min(1, "Asset name is required"),
   serialNumber: z.string().trim().min(1, "Serial number is required"),
   writtenDescription: z.string().trim().optional().nullable(),
-  folderId: z
-    .union([z.string().uuid("Invalid folderId"), z.literal(""), z.null()])
-    .optional()
-    .transform((value) => (value === "" ? null : value)),
+  folderId: optionalOfflineId,
 });

@@ -1,65 +1,70 @@
-import prisma from "../prisma.js";
+import mongoose from "mongoose";
+import { Folder } from "../../models/Folder.js";
+
+const toId = (value) => {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && "_id" in value && value._id) {
+    return value._id.toString();
+  }
+  if (typeof value.toString === "function") {
+    return value.toString();
+  }
+  return null;
+};
+
+const mapCreatedBy = (user) => {
+  if (!user) return null;
+  return {
+    id: toId(user._id ?? user),
+    fullName: user.fullName ?? null,
+    email: user.email ?? null,
+  };
+};
+
+const mapFolder = (doc, { includeCreatedBy = false } = {}) => {
+  if (!doc) return null;
+  const folder = {
+    id: toId(doc._id),
+    name: doc.name,
+    projectId: toId(doc.project),
+    parentId: toId(doc.parent),
+    createdAt: doc.createdAt,
+    createdById: toId(doc.createdBy),
+  };
+  if (includeCreatedBy) {
+    folder.createdBy = mapCreatedBy(doc.createdBy);
+  }
+  return folder;
+};
 
 export const folderRepository = {
   async create({ name, projectId, parentId, createdById }) {
-    return prisma.folder.create({
-      data: {
-        name,
-        projectId,
-        parentId: parentId || null,
-        createdById,
-      },
-      select: {
-        id: true,
-        name: true,
-        parentId: true,
-        projectId: true,
-        createdAt: true,
-        createdBy: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-          },
-        },
-      },
+    const folder = new Folder({
+      name,
+      project: projectId,
+      parent: parentId || null,
+      createdBy: createdById,
     });
+    await folder.save();
+    await folder.populate("createdBy", "fullName email");
+    return mapFolder(folder.toObject(), { includeCreatedBy: true });
   },
 
   async findById(id) {
-    return prisma.folder.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        projectId: true,
-        parentId: true,
-        createdById: true,
-      },
-    });
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
+    const folder = await Folder.findById(id).lean();
+    return mapFolder(folder);
   },
 
   async findByProjectIdAndParentId(projectId, parentId = null) {
-    return prisma.folder.findMany({
-      where: {
-        projectId,
-        parentId,
-      },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        parentId: true,
-        projectId: true,
-        createdAt: true,
-        createdBy: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-          },
-        },
-      },
-    });
+    const query = Folder.find({
+      project: projectId,
+      parent: parentId,
+    })
+      .sort({ createdAt: -1 })
+      .populate("createdBy", "fullName email");
+    const folders = await query.lean();
+    return folders.map((doc) => mapFolder(doc, { includeCreatedBy: true }));
   },
 };

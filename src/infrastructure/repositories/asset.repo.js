@@ -1,41 +1,54 @@
-import prisma from "../prisma.js";
+import { Asset } from "../../models/Asset.js";
 
-const assetSelect = {
-  id: true,
-  name: true,
-  serialNumber: true,
-  writtenDescription: true,
-  folderId: true,
-  projectId: true,
-  createdAt: true,
-  updatedAt: true,
-  createdBy: {
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-    },
-  },
-  images: {
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      url: true,
-      publicId: true,
-      createdAt: true,
-    },
-  },
-  voiceNotes: {
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      url: true,
-      publicId: true,
-      duration: true,
-      createdAt: true,
-    },
-  },
+const toId = (value) => {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && "_id" in value && value._id) {
+    return value._id.toString();
+  }
+  if (typeof value.toString === "function") {
+    return value.toString();
+  }
+  return null;
 };
+
+const mapCreatedBy = (user) => {
+  if (!user) return null;
+  return {
+    id: toId(user._id ?? user),
+    fullName: user.fullName ?? null,
+    email: user.email ?? null,
+  };
+};
+
+const mapImage = (image) => ({
+  id: toId(image._id),
+  url: image.url,
+  publicId: image.publicId ?? null,
+  createdAt: image.createdAt,
+});
+
+const mapVoiceNote = (note) => ({
+  id: toId(note._id),
+  url: note.url,
+  publicId: note.publicId ?? null,
+  duration: note.duration ?? null,
+  createdAt: note.createdAt,
+});
+
+const mapAsset = (doc) => ({
+  id: toId(doc._id),
+  name: doc.name,
+  serialNumber: doc.serialNumber,
+  writtenDescription: doc.writtenDescription ?? null,
+  folderId: toId(doc.folder),
+  projectId: toId(doc.project),
+  createdAt: doc.createdAt,
+  updatedAt: doc.updatedAt,
+  createdBy: mapCreatedBy(doc.createdBy),
+  images: (doc.images || []).map(mapImage),
+  voiceNotes: (doc.voiceNotes || []).map(mapVoiceNote),
+});
 
 export const assetRepository = {
   async create({
@@ -48,54 +61,47 @@ export const assetRepository = {
     folderId,
     createdById,
   }) {
-    return prisma.asset.create({
-      data: {
-        name,
-        serialNumber,
-        writtenDescription: writtenDescription || null,
-        projectId,
-        folderId: folderId || null,
-        createdById,
-        images: images?.length
-          ? {
-              create: images.map((item) => ({
-                url: item.url,
-                publicId: item.publicId || null,
-              })),
-            }
-          : undefined,
-        voiceNotes: voiceNotes?.length
-          ? {
-              create: voiceNotes.map((item) => ({
-                url: item.url,
-                publicId: item.publicId || null,
-                duration: item.duration ?? null,
-              })),
-            }
-          : undefined,
-      },
-      select: assetSelect,
+    const asset = new Asset({
+      name,
+      serialNumber,
+      writtenDescription,
+      project: projectId,
+      folder: folderId || null,
+      createdBy: createdById,
+      images: (images || []).map((item) => ({
+        url: item.url,
+        publicId: item.publicId || null,
+      })),
+      voiceNotes: (voiceNotes || []).map((item) => ({
+        url: item.url,
+        publicId: item.publicId || null,
+        duration: item.duration ?? null,
+      })),
     });
+
+    await asset.save();
+    await asset.populate("createdBy", "fullName email");
+
+    return mapAsset(asset.toObject());
   },
 
   async findBySerialNumber(serialNumber) {
-    return prisma.asset.findUnique({
-      where: { serialNumber },
-      select: {
-        id: true,
-        serialNumber: true,
-      },
-    });
+    const doc = await Asset.findOne({ serialNumber }).lean();
+    if (!doc) return null;
+    return {
+      id: toId(doc._id),
+      serialNumber: doc.serialNumber,
+    };
   },
 
   async findByProjectIdAndFolderId(projectId, folderId = null) {
-    return prisma.asset.findMany({
-      where: {
-        projectId,
-        folderId,
-      },
-      orderBy: { createdAt: "desc" },
-      select: assetSelect,
-    });
+    const query = Asset.find({
+      project: projectId,
+      folder: folderId,
+    })
+      .sort({ createdAt: -1 })
+      .populate("createdBy", "fullName email");
+    const assets = await query.lean();
+    return assets.map(mapAsset);
   },
 };

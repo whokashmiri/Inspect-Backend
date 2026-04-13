@@ -1,9 +1,9 @@
 // auth.service.js - Handles user authentication, including signup, login, token refresh, and logout.
 
 import bcrypt from "bcryptjs";
-import prisma from "../../infrastructure/prisma.js";
+import mongoose from "mongoose";
 import { userRepository } from "../../infrastructure/repositories/user.repo.js";
-// import { companyRepository } from "../../infrastructure/repositories/company.repo.js";
+import { companyRepository } from "../../infrastructure/repositories/company.repo.js";
 import { tokenService } from "./token.service.js";
 import { AppError } from "../../utils/AppError.js";
 
@@ -27,76 +27,67 @@ export const authService = {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    const session = await mongoose.startSession();
     try {
-      const user = await prisma.$transaction(async (tx) => {
-        let company = await tx.company.findUnique({
-          where: { name: normalizedCompanyName },
-          select: { id: true, name: true },
-        });
+      session.startTransaction();
 
-        if (!company) {
-          company = await tx.company.create({
-            data: { name: normalizedCompanyName },
-            select: { id: true, name: true },
-          });
-        }
-
-        if (normalizedRole === "Manager") {
-          const existingManager = await tx.user.findFirst({
-            where: {
-              companyId: company.id,
-              role: "Manager",
-            },
-            select: { id: true },
-          });
-
-          if (existingManager) {
-            throw new AppError(
-              `Company ${normalizedCompanyName} already has a manager`,
-              409
-            );
-          }
-        }
-
-        return tx.user.create({
-          data: {
-            email: normalizedEmail,
-            fullName: normalizedFullName,
-            role: normalizedRole,
-            passwordHash,
-            companyId: company.id,
-          },
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-            role: true,
-            createdAt: true,
-            company: { select: { name: true } },
-          },
-        });
+      let company = await companyRepository.findByName(normalizedCompanyName, {
+        session,
       });
 
-      return buildAuthResponse(user);
-    } catch (error) {
-      if (
-        error?.code === "P2002" &&
-        Array.isArray(error?.meta?.target) &&
-        error.meta.target.includes("email")
-      ) {
-        throw new AppError("Email already in use", 409);
+      if (!company) {
+        company = await companyRepository.create(
+          { name: normalizedCompanyName },
+          { session }
+        );
       }
 
-      if (
-        error?.code === "P2002" &&
-        Array.isArray(error?.meta?.target) &&
-        error.meta.target.includes("name")
-      ) {
-        throw new AppError("Company already exists", 409);
+      if (normalizedRole === "Manager") {
+        const existingManager = await userRepository.findManagerByCompanyId(
+          company.id,
+          { session }
+        );
+
+        if (existingManager) {
+          throw new AppError(
+            `Company ${normalizedCompanyName} already has a manager`,
+            409
+          );
+        }
+      }
+
+      const user = await userRepository.create(
+        {
+          email: normalizedEmail,
+          fullName: normalizedFullName,
+          role: normalizedRole,
+          passwordHash,
+          companyId: company.id,
+        },
+        { session }
+      );
+
+      await session.commitTransaction();
+      return buildAuthResponse(user);
+    } catch (error) {
+      await session.abortTransaction();
+
+      if (error?.code === 11000) {
+        const target = Array.isArray(error.keyPattern)
+          ? error.keyPattern[0]
+          : Object.keys(error.keyPattern || {})[0];
+        if (target === "email") {
+          throw new AppError("Email already in use", 409);
+        }
+        if (target === "name") {
+          throw new AppError("Company already exists", 409);
+        }
       }
 
       if (error instanceof AppError) throw error;
       throw error;
+    } finally {
+      session.endSession();
     }
   },
 
