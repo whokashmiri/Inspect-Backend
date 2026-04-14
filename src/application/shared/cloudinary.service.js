@@ -21,13 +21,13 @@ function uploadBuffer({ buffer, folder, resourceType, publicId }) {
 }
 
 export const cloudinaryService = {
-  async uploadImage(file, assetSerialNumber) {
+  async uploadImage(file, assetKey) {
     try {
       const result = await uploadBuffer({
         buffer: file.buffer,
         folder: "assets/images",
         resourceType: "image",
-        publicId: `${assetSerialNumber}-${Date.now()}`,
+        publicId: `ABM${assetKey}-${Date.now()}`,
       });
 
       return {
@@ -39,13 +39,13 @@ export const cloudinaryService = {
     }
   },
 
-  async uploadVoiceNote(file, assetSerialNumber) {
+  async uploadVoiceNote(file, assetKey) {
     try {
       const result = await uploadBuffer({
         buffer: file.buffer,
         folder: "assets/voice-notes",
-        resourceType: "video",
-        publicId: `${assetSerialNumber}-${Date.now()}`,
+        resourceType: "video", // correct for audio in Cloudinary
+        publicId: `ABM${assetKey}-${Date.now()}`,
       });
 
       return {

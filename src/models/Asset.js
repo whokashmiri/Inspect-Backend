@@ -39,6 +39,11 @@ const assetSchema = new mongoose.Schema(
       default: null,
       trim: true,
     },
+    model: {
+      type: String,
+      default: null,
+      trim: true,
+    },
 
     manufactureYear: {
       type: String,

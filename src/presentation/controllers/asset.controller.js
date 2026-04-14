@@ -24,6 +24,7 @@ export const folderAssetController = {
       condition: req.body.condition || null,
       assetType: req.body.assetType || "Other",
       brand: req.body.brand || null,
+      model: req.body.model || null,
       manufactureYear: req.body.manufactureYear || null,
       kilometersDriven: req.body.kilometersDriven || null,
       imageFiles: req.files?.images || [],

@@ -58,6 +58,7 @@ export const folderAssetService = {
     condition,
     assetType,
     brand,
+    model,
     manufactureYear,
     kilometersDriven,
     imageFiles,
@@ -88,6 +89,8 @@ export const folderAssetService = {
 
     const normalizedBrand =
       normalizedAssetType === "Vehicle" ? brand?.trim() || null : null;
+    const normalizedModel =
+      normalizedAssetType === "Vehicle" ? model?.trim() || null : null;
 
     const normalizedManufactureYear =
       normalizedAssetType === "Vehicle"
@@ -119,6 +122,7 @@ export const folderAssetService = {
       condition: normalizedCondition,
       assetType: normalizedAssetType,
       brand: normalizedBrand,
+      model: normalizedModel,
       manufactureYear: normalizedManufactureYear,
       kilometersDriven: normalizedKilometersDriven,
       images: uploadedImages,
