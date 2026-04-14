@@ -39,8 +39,12 @@ const mapVoiceNote = (note) => ({
 const mapAsset = (doc) => ({
   id: toId(doc._id),
   name: doc.name,
-  serialNumber: doc.serialNumber,
   writtenDescription: doc.writtenDescription ?? null,
+  condition: doc.condition ?? null,
+  assetType: doc.assetType ?? "Other",
+  brand: doc.brand ?? null,
+  manufactureYear: doc.manufactureYear ?? null,
+  kilometersDriven: doc.kilometersDriven ?? null,
   folderId: toId(doc.folder),
   projectId: toId(doc.project),
   createdAt: doc.createdAt,
@@ -53,8 +57,12 @@ const mapAsset = (doc) => ({
 export const assetRepository = {
   async create({
     name,
-    serialNumber,
     writtenDescription,
+    condition,
+    assetType,
+    brand,
+    manufactureYear,
+    kilometersDriven,
     images,
     voiceNotes,
     projectId,
@@ -63,8 +71,12 @@ export const assetRepository = {
   }) {
     const asset = new Asset({
       name,
-      serialNumber,
       writtenDescription,
+      condition: condition ?? null,
+      assetType: assetType || "Other",
+      brand: brand ?? null,
+      manufactureYear: manufactureYear ?? null,
+      kilometersDriven: kilometersDriven ?? null,
       project: projectId,
       folder: folderId || null,
       createdBy: createdById,
@@ -85,15 +97,6 @@ export const assetRepository = {
     return mapAsset(asset.toObject());
   },
 
-  async findBySerialNumber(serialNumber) {
-    const doc = await Asset.findOne({ serialNumber }).lean();
-    if (!doc) return null;
-    return {
-      id: toId(doc._id),
-      serialNumber: doc.serialNumber,
-    };
-  },
-
   async findByProjectIdAndFolderId(projectId, folderId = null) {
     const query = Asset.find({
       project: projectId,
@@ -101,6 +104,7 @@ export const assetRepository = {
     })
       .sort({ createdAt: -1 })
       .populate("createdBy", "fullName email");
+
     const assets = await query.lean();
     return assets.map(mapAsset);
   },

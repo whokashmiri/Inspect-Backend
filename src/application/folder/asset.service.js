@@ -54,15 +54,16 @@ export const folderAssetService = {
     projectId,
     folderId,
     name,
-    serialNumber,
     writtenDescription,
+    condition,
+    assetType,
+    brand,
+    manufactureYear,
+    kilometersDriven,
     imageFiles,
     voiceNoteFiles,
   }) {
     if (!name?.trim()) throw new AppError("Asset name is required", 400);
-    if (!serialNumber?.trim()) {
-      throw new AppError("Serial number is required", 400);
-    }
 
     const user = await userRepository.findById(userId);
     if (!user) throw new AppError("User not found", 404);
@@ -79,29 +80,47 @@ export const folderAssetService = {
       }
     }
 
-    const existingAsset = await assetRepository.findBySerialNumber(
-      serialNumber.trim()
-    );
-    if (existingAsset) {
-      throw new AppError("Serial number already exists", 409);
-    }
+    const normalizedAssetType = assetType === "Vehicle" ? "Vehicle" : "Other";
+    const normalizedCondition =
+      condition && ["New", "Used", "Damaged"].includes(condition)
+        ? condition
+        : null;
+
+    const normalizedBrand =
+      normalizedAssetType === "Vehicle" ? brand?.trim() || null : null;
+
+    const normalizedManufactureYear =
+      normalizedAssetType === "Vehicle"
+        ? manufactureYear?.trim() || null
+        : null;
+
+    const normalizedKilometersDriven =
+      normalizedAssetType === "Vehicle"
+        ? kilometersDriven?.trim() || null
+        : null;
+
+    const uploadKey = `${projectId}_${Date.now()}`;
 
     const uploadedImages = await Promise.all(
       (imageFiles || []).map((file) =>
-        cloudinaryService.uploadImage(file, serialNumber.trim())
+        cloudinaryService.uploadImage(file, uploadKey)
       )
     );
 
     const uploadedVoiceNotes = await Promise.all(
       (voiceNoteFiles || []).map((file) =>
-        cloudinaryService.uploadVoiceNote(file, serialNumber.trim())
+        cloudinaryService.uploadVoiceNote(file, uploadKey)
       )
     );
 
     const asset = await assetRepository.create({
       name: name.trim(),
-      serialNumber: serialNumber.trim(),
       writtenDescription: writtenDescription?.trim() || null,
+      condition: normalizedCondition,
+      assetType: normalizedAssetType,
+      brand: normalizedBrand,
+      manufactureYear: normalizedManufactureYear,
+      kilometersDriven: normalizedKilometersDriven,
       images: uploadedImages,
       voiceNotes: uploadedVoiceNotes,
       projectId,

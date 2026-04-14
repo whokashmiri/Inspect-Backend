@@ -20,28 +20,56 @@ const assetVoiceNoteSchema = new mongoose.Schema(
 const assetSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-    serialNumber: {
+    writtenDescription: { type: String, default: null, trim: true },
+
+    condition: {
       type: String,
-      required: true,
-      unique: true,
+      enum: ["New", "Used", "Damaged"],
+      default: null,
+    },
+
+    assetType: {
+      type: String,
+      enum: ["Vehicle", "Other"],
+      default: "Other",
+    },
+
+    brand: {
+      type: String,
+      default: null,
       trim: true,
     },
-    writtenDescription: { type: String, default: null, trim: true },
+
+    manufactureYear: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+
+    kilometersDriven: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+
     project: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
       required: true,
     },
+
     folder: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Folder",
       default: null,
     },
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
+
     images: { type: [assetImageSchema], default: [] },
     voiceNotes: { type: [assetVoiceNoteSchema], default: [] },
   },

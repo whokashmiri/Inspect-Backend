@@ -37,8 +37,12 @@ export const createFolderSchema = z.object({
 });
 
 export const createAssetSchema = z.object({
-  name: z.string().trim().min(1, "Asset name is required"),
-  serialNumber: z.string().trim().min(1, "Serial number is required"),
-  writtenDescription: z.string().trim().optional().nullable(),
-  folderId: optionalOfflineId,
+  name: z.string().min(1, "Asset name is required"),
+  folderId: z.string().optional().nullable(),
+  writtenDescription: z.string().optional().nullable(),
+  condition: z.enum(["New", "Used", "Damaged"]).optional().nullable(),
+  assetType: z.enum(["Vehicle", "Other"]).optional(),
+  brand: z.string().optional().nullable(),
+  manufactureYear: z.string().optional().nullable(),
+  kilometersDriven: z.string().optional().nullable(),
 });
