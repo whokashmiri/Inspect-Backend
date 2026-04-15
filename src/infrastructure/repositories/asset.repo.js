@@ -100,6 +100,80 @@ export const assetRepository = {
     return mapAsset(asset.toObject());
   },
 
+  async findById(assetId) {
+    const asset = await Asset.findById(assetId)
+      .populate("createdBy", "fullName email")
+      .lean();
+
+    return asset ? mapAsset(asset) : null;
+  },
+
+  async updateById(
+    assetId,
+    {
+      writtenDescription,
+      condition,
+      assetType,
+      brand,
+      model,
+      manufactureYear,
+      kilometersDriven,
+      images,
+      voiceNotes,
+    }
+  ) {
+    const asset = await Asset.findById(assetId);
+    if (!asset) return null;
+
+    if (writtenDescription !== undefined) {
+      asset.writtenDescription = writtenDescription ?? null;
+    }
+
+    if (condition !== undefined) {
+      asset.condition = condition ?? null;
+    }
+
+    if (assetType !== undefined) {
+      asset.assetType = assetType || "Other";
+    }
+
+    if (brand !== undefined) {
+      asset.brand = brand ?? null;
+    }
+
+    if (model !== undefined) {
+      asset.model = model ?? null;
+    }
+
+    if (manufactureYear !== undefined) {
+      asset.manufactureYear = manufactureYear ?? null;
+    }
+
+    if (kilometersDriven !== undefined) {
+      asset.kilometersDriven = kilometersDriven ?? null;
+    }
+
+    if (images !== undefined) {
+      asset.images = (images || []).map((item) => ({
+        url: item.url,
+        publicId: item.publicId || null,
+      }));
+    }
+
+    if (voiceNotes !== undefined) {
+      asset.voiceNotes = (voiceNotes || []).map((item) => ({
+        url: item.url,
+        publicId: item.publicId || null,
+        duration: item.duration ?? null,
+      }));
+    }
+
+    await asset.save();
+    await asset.populate("createdBy", "fullName email");
+
+    return mapAsset(asset.toObject());
+  },
+
   async findByProjectIdAndFolderId(projectId, folderId = null) {
     const query = Asset.find({
       project: projectId,
@@ -109,6 +183,20 @@ export const assetRepository = {
       .populate("createdBy", "fullName email");
 
     const assets = await query.lean();
+    return assets.map(mapAsset);
+  },
+
+  async searchByProjectId(projectId, search) {
+    const query = {
+      project: projectId,
+      name: { $regex: search, $options: "i" },
+    };
+
+    const assets = await Asset.find(query)
+      .sort({ createdAt: -1 })
+      .populate("createdBy", "fullName email")
+      .lean();
+
     return assets.map(mapAsset);
   },
 };

@@ -1,3 +1,5 @@
+
+//asset.service.js
 import { AppError } from "../../utils/AppError.js";
 import { userRepository } from "../../infrastructure/repositories/user.repo.js";
 import { projectRepository } from "../../infrastructure/repositories/project.repo.js";
@@ -162,4 +164,98 @@ export const folderAssetService = {
       assets,
     };
   },
+
+
+async updateAsset({
+  userId,
+  assetId,
+  writtenDescription,
+  condition,
+  assetType,
+  brand,
+  model,
+  manufactureYear,
+  kilometersDriven,
+  imageFiles,
+  voiceNoteFiles,
+}) {
+  const user = await userRepository.findById(userId);
+  if (!user) throw new AppError("User not found", 404);
+  if (!user.company?.id) {
+    throw new AppError("User is not linked to a company", 400);
+  }
+
+  const existingAsset = await assetRepository.findById(assetId);
+  if (!existingAsset) {
+    throw new AppError("Asset not found", 404);
+  }
+
+  // 🔐 project access check
+  await getAccessibleProject(existingAsset.projectId, user);
+
+  // normalize
+  const normalizedAssetType = assetType === "Vehicle" ? "Vehicle" : "Other";
+
+  const normalizedCondition =
+    condition && ["New", "Used", "Damaged"].includes(condition)
+      ? condition
+      : null;
+
+  const normalizedBrand =
+    normalizedAssetType === "Vehicle" ? brand?.trim() || null : null;
+
+  const normalizedModel =
+    normalizedAssetType === "Vehicle" ? model?.trim() || null : null;
+
+  const normalizedManufactureYear =
+    normalizedAssetType === "Vehicle"
+      ? manufactureYear?.trim() || null
+      : null;
+
+  const normalizedKilometersDriven =
+    normalizedAssetType === "Vehicle"
+      ? kilometersDriven?.trim() || null
+      : null;
+
+  const uploadKey = `${existingAsset.projectId}_${Date.now()}`;
+
+  // upload new files (if any)
+  const uploadedImages = await Promise.all(
+    (imageFiles || []).map((file) =>
+      cloudinaryService.uploadImage(file, uploadKey)
+    )
+  );
+
+  const uploadedVoiceNotes = await Promise.all(
+    (voiceNoteFiles || []).map((file) =>
+      cloudinaryService.uploadVoiceNote(file, uploadKey)
+    )
+  );
+
+  // ⚠️ simple strategy: replace media if new ones are sent
+  const images =
+    uploadedImages.length > 0
+      ? uploadedImages
+      : existingAsset.images;
+
+  const voiceNotes =
+    uploadedVoiceNotes.length > 0
+      ? uploadedVoiceNotes
+      : existingAsset.voiceNotes;
+
+  const updatedAsset = await assetRepository.updateById(assetId, {
+    writtenDescription,
+    condition: normalizedCondition,
+    assetType: normalizedAssetType,
+    brand: normalizedBrand,
+    model: normalizedModel,
+    manufactureYear: normalizedManufactureYear,
+    kilometersDriven: normalizedKilometersDriven,
+    images,
+    voiceNotes,
+  });
+
+  return { asset: updatedAsset };
+}
+
 };

@@ -1,4 +1,3 @@
-
 // folder.routes.js
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.middleware.js";
@@ -9,6 +8,7 @@ import { folderAssetController } from "../controllers/asset.controller.js";
 import {
   createFolderSchema,
   createAssetSchema,
+  updateAssetSchema,
 } from "../validators/auth.validators.js";
 
 const router = Router();
@@ -32,6 +32,14 @@ router.post(
   uploadAssetMedia,
   validate(createAssetSchema),
   asyncWrap(folderAssetController.createAsset)
+);
+
+router.patch(
+  "/assets/:assetId",
+  authenticate,
+  uploadAssetMedia,
+  validate(updateAssetSchema),
+  asyncWrap(folderAssetController.updateAsset)
 );
 
 export default router;

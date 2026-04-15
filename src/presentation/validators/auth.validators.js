@@ -47,3 +47,13 @@ export const createAssetSchema = z.object({
   manufactureYear: z.string().optional().nullable(),
   kilometersDriven: z.string().optional().nullable(),
 });
+
+export const updateAssetSchema = z.object({
+  writtenDescription: z.string().optional().nullable(),
+  condition: z.enum(["New", "Used", "Damaged"]).optional().nullable(),
+  assetType: z.enum(["Vehicle", "Other"]).optional(),
+  brand: z.string().optional().nullable(),
+  model: z.string().optional().nullable(),
+  manufactureYear: z.string().optional().nullable(),
+  kilometersDriven: z.string().optional().nullable(),
+});

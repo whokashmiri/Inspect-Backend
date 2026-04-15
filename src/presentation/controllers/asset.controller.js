@@ -1,3 +1,4 @@
+// controllers/asset.controller.js
 import { folderAssetService } from "../../application/folder/asset.service.js";
 
 export const folderAssetController = {
@@ -13,8 +14,9 @@ export const folderAssetController = {
   },
 
   async createAsset(req, res) {
-      console.log("BODY:", req.body);
-      console.log("FILES:", req.files);
+    console.log("BODY:", req.body);
+    console.log("FILES:", req.files);
+
     const result = await folderAssetService.createAsset({
       userId: req.userId,
       projectId: req.params.projectId,
@@ -32,6 +34,27 @@ export const folderAssetController = {
     });
 
     return res.status(201).json(result);
+  },
+
+  async updateAsset(req, res) {
+    console.log("UPDATE BODY:", req.body);
+    console.log("UPDATE FILES:", req.files);
+
+    const result = await folderAssetService.updateAsset({
+      userId: req.userId,
+      assetId: req.params.assetId,
+      writtenDescription: req.body.writtenDescription || null,
+      condition: req.body.condition || null,
+      assetType: req.body.assetType || "Other",
+      brand: req.body.brand || null,
+      model: req.body.model || null,
+      manufactureYear: req.body.manufactureYear || null,
+      kilometersDriven: req.body.kilometersDriven || null,
+      imageFiles: req.files?.images || [],
+      voiceNoteFiles: req.files?.voiceNotes || [],
+    });
+
+    return res.status(200).json(result);
   },
 
   async listContents(req, res) {
