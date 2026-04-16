@@ -44,6 +44,14 @@ export const createAssetSchema = z.object({
   assetType: z.enum(["Vehicle", "Other"]).optional(),
   brand: z.string().optional().nullable(),
   model: z.string().optional().nullable(),
+    isDone: z.preprocess(
+    (value) => {
+      if (value === "true") return true;
+      if (value === "false") return false;
+      return value;
+    },
+    z.boolean().optional().nullable()
+  ),
   manufactureYear: z.string().optional().nullable(),
   kilometersDriven: z.string().optional().nullable(),
 });
@@ -54,6 +62,14 @@ export const updateAssetSchema = z.object({
   assetType: z.enum(["Vehicle", "Other"]).optional(),
   brand: z.string().optional().nullable(),
   model: z.string().optional().nullable(),
+  isDone: z.preprocess(
+    (value) => {
+      if (value === "true") return true;
+      if (value === "false") return false;
+      return value;
+    },
+    z.boolean().optional().nullable()
+  ),
   manufactureYear: z.string().optional().nullable(),
   kilometersDriven: z.string().optional().nullable(),
 });

@@ -51,7 +51,8 @@ export const folderAssetService = {
     return { folder };
   },
 
-  async createAsset({
+
+async createAsset({
     userId,
     projectId,
     folderId,
@@ -63,6 +64,7 @@ export const folderAssetService = {
     model,
     manufactureYear,
     kilometersDriven,
+    isDone,
     imageFiles,
     voiceNoteFiles,
   }) {
@@ -118,6 +120,7 @@ export const folderAssetService = {
       )
     );
 
+
     const asset = await assetRepository.create({
       name: name.trim(),
       writtenDescription: writtenDescription?.trim() || null,
@@ -127,6 +130,7 @@ export const folderAssetService = {
       model: normalizedModel,
       manufactureYear: normalizedManufactureYear,
       kilometersDriven: normalizedKilometersDriven,
+      isDone: isDone !== undefined ? isDone : false,
       images: uploadedImages,
       voiceNotes: uploadedVoiceNotes,
       projectId,
@@ -166,6 +170,7 @@ export const folderAssetService = {
   },
 
 
+
 async updateAsset({
   userId,
   assetId,
@@ -176,9 +181,11 @@ async updateAsset({
   model,
   manufactureYear,
   kilometersDriven,
+  isDone,
   imageFiles,
   voiceNoteFiles,
 }) {
+  console.log('Service isDone:', isDone);
   const user = await userRepository.findById(userId);
   if (!user) throw new AppError("User not found", 404);
   if (!user.company?.id) {
@@ -229,6 +236,7 @@ async updateAsset({
     )
   );
 
+
   const images = [...(existingAsset.images || []), ...uploadedImages];
   const voiceNotes = [...(existingAsset.voiceNotes || []), ...uploadedVoiceNotes];
 
@@ -263,10 +271,14 @@ manufactureYear:
     ? existingAsset.manufactureYear
     : normalizedManufactureYear,
 
-kilometersDriven:
-  kilometersDriven === undefined
-    ? existingAsset.kilometersDriven
-    : normalizedKilometersDriven,
+    kilometersDriven:
+      kilometersDriven === undefined
+        ? existingAsset.kilometersDriven
+        : normalizedKilometersDriven,
+    isDone:
+      isDone === undefined
+        ? existingAsset.isDone
+        : isDone,
     images,
     voiceNotes,
   });

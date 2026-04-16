@@ -76,8 +76,11 @@ const assetSchema = new mongoose.Schema(
     },
 
     images: { type: [assetImageSchema], default: [] },
+
     voiceNotes: { type: [assetVoiceNoteSchema], default: [] },
+    isDone: { type: Boolean, default: false },
   },
+
   { timestamps: true }
 );
 

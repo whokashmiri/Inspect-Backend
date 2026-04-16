@@ -45,8 +45,10 @@ const mapAsset = (doc) => ({
   brand: doc.brand ?? null,
   model: doc.model ?? null,
   manufactureYear: doc.manufactureYear ?? null,
-  kilometersDriven: doc.kilometersDriven ?? null,
-  folderId: toId(doc.folder),
+    kilometersDriven: doc.kilometersDriven ?? null,
+    isDone: doc.isDone ?? false,
+    folderId: toId(doc.folder),
+
   projectId: toId(doc.project),
   createdAt: doc.createdAt,
   updatedAt: doc.updatedAt,
@@ -65,6 +67,7 @@ export const assetRepository = {
     model,
     manufactureYear,
     kilometersDriven,
+    isDone,
     images,
     voiceNotes,
     projectId,
@@ -92,6 +95,7 @@ export const assetRepository = {
         publicId: item.publicId || null,
         duration: item.duration ?? null,
       })),
+      isDone: isDone ?? false,
     });
 
     await asset.save();
@@ -109,70 +113,75 @@ export const assetRepository = {
   },
 
   async updateById(
-    assetId,
-    {
-      writtenDescription,
-      condition,
-      assetType,
-      brand,
-      model,
-      manufactureYear,
-      kilometersDriven,
-      images,
-      voiceNotes,
-    }
-  ) {
-    const asset = await Asset.findById(assetId);
-    if (!asset) return null;
+  assetId,
+  {
+    writtenDescription,
+    condition,
+    assetType,
+    brand,
+    model,
+    manufactureYear,
+    kilometersDriven,
+    isDone,
+    images,
+    voiceNotes,
+  }
+) {
+  const asset = await Asset.findById(assetId);
+  if (!asset) return null;
 
-    if (writtenDescription !== undefined) {
-      asset.writtenDescription = writtenDescription ?? null;
-    }
+  if (writtenDescription !== undefined) {
+    asset.writtenDescription = writtenDescription ?? null;
+  }
 
-    if (condition !== undefined) {
-      asset.condition = condition ?? null;
-    }
+  if (condition !== undefined) {
+    asset.condition = condition ?? null;
+  }
 
-    if (assetType !== undefined) {
-      asset.assetType = assetType || "Other";
-    }
+  if (assetType !== undefined) {
+    asset.assetType = assetType || "Other";
+  }
 
-    if (brand !== undefined) {
-      asset.brand = brand ?? null;
-    }
+  if (brand !== undefined) {
+    asset.brand = brand ?? null;
+  }
 
-    if (model !== undefined) {
-      asset.model = model ?? null;
-    }
+  if (model !== undefined) {
+    asset.model = model ?? null;
+  }
 
-    if (manufactureYear !== undefined) {
-      asset.manufactureYear = manufactureYear ?? null;
-    }
+  if (manufactureYear !== undefined) {
+    asset.manufactureYear = manufactureYear ?? null;
+  }
 
-    if (kilometersDriven !== undefined) {
-      asset.kilometersDriven = kilometersDriven ?? null;
-    }
+  if (kilometersDriven !== undefined) {
+    asset.kilometersDriven = kilometersDriven ?? null;
+  }
 
-    if (images !== undefined) {
-      asset.images = (images || []).map((item) => ({
-        url: item.url,
-        publicId: item.publicId || null,
-      }));
-    }
+  if (isDone !== undefined) {
+    asset.isDone = isDone;
+  }
 
-    if (voiceNotes !== undefined) {
-      asset.voiceNotes = (voiceNotes || []).map((item) => ({
-        url: item.url,
-        publicId: item.publicId || null,
-        duration: item.duration ?? null,
-      }));
-    }
+  if (images !== undefined) {
+    asset.images = (images || []).map((item) => ({
+      url: item.url,
+      publicId: item.publicId || null,
+    }));
+  }
 
-    await asset.save();
-    await asset.populate("createdBy", "fullName email");
+  if (voiceNotes !== undefined) {
+    asset.voiceNotes = (voiceNotes || []).map((item) => ({
+      url: item.url,
+      publicId: item.publicId || null,
+      duration: item.duration ?? null,
+    }));
+  }
 
-    return mapAsset(asset.toObject());
-  },
+  await asset.save();
+  await asset.populate("createdBy", "fullName email");
+
+  return mapAsset(asset.toObject());
+},
 
   async findByProjectIdAndFolderId(projectId, folderId = null) {
     const query = Asset.find({
