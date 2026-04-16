@@ -190,10 +190,8 @@ async updateAsset({
     throw new AppError("Asset not found", 404);
   }
 
-  // 🔐 project access check
   await getAccessibleProject(existingAsset.projectId, user);
 
-  // normalize
   const normalizedAssetType = assetType === "Vehicle" ? "Vehicle" : "Other";
 
   const normalizedCondition =
@@ -219,7 +217,6 @@ async updateAsset({
 
   const uploadKey = `${existingAsset.projectId}_${Date.now()}`;
 
-  // upload new files (if any)
   const uploadedImages = await Promise.all(
     (imageFiles || []).map((file) =>
       cloudinaryService.uploadImage(file, uploadKey)
@@ -232,25 +229,44 @@ async updateAsset({
     )
   );
 
-  // ⚠️ simple strategy: replace media if new ones are sent
-  const images =
-    uploadedImages.length > 0
-      ? uploadedImages
-      : existingAsset.images;
-
-  const voiceNotes =
-    uploadedVoiceNotes.length > 0
-      ? uploadedVoiceNotes
-      : existingAsset.voiceNotes;
+  const images = [...(existingAsset.images || []), ...uploadedImages];
+  const voiceNotes = [...(existingAsset.voiceNotes || []), ...uploadedVoiceNotes];
 
   const updatedAsset = await assetRepository.updateById(assetId, {
-    writtenDescription,
-    condition: normalizedCondition,
-    assetType: normalizedAssetType,
-    brand: normalizedBrand,
-    model: normalizedModel,
-    manufactureYear: normalizedManufactureYear,
-    kilometersDriven: normalizedKilometersDriven,
+    writtenDescription:
+      writtenDescription === undefined
+        ? existingAsset.writtenDescription
+        : writtenDescription?.trim() || null,
+    
+    condition:
+  condition === undefined
+    ? existingAsset.condition
+    : normalizedCondition,
+
+assetType:
+  assetType === undefined
+    ? existingAsset.assetType
+    : normalizedAssetType,
+
+brand:
+  brand === undefined
+    ? existingAsset.brand
+    : normalizedBrand,
+
+model:
+  model === undefined
+    ? existingAsset.model
+    : normalizedModel,
+
+manufactureYear:
+  manufactureYear === undefined
+    ? existingAsset.manufactureYear
+    : normalizedManufactureYear,
+
+kilometersDriven:
+  kilometersDriven === undefined
+    ? existingAsset.kilometersDriven
+    : normalizedKilometersDriven,
     images,
     voiceNotes,
   });
