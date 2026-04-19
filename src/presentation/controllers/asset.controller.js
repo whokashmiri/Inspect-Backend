@@ -23,7 +23,10 @@ export const folderAssetController = {
       folderId: req.body.folderId || null,
       name: req.body.name,
       writtenDescription: req.body.writtenDescription || null,
-      condition: req.body.condition || null,
+      condition:
+        req.body.condition === undefined || req.body.condition === ""
+        ? undefined
+        : req.body.condition,
       assetType: req.body.assetType || "Other",
       brand: req.body.brand || null,
       model: req.body.model || null,
@@ -39,8 +42,8 @@ export const folderAssetController = {
   },
 
  async updateAsset(req, res) {
-  console.log("isDone req.body:", req.body.isDone);
-  console.log("isDone req.files:", req.files);
+    console.log("BODY:", req.body);
+    console.log("FILES:", req.files);
 
  const result = await folderAssetService.updateAsset({
   userId: req.userId,
@@ -50,7 +53,9 @@ export const folderAssetController = {
       ? undefined
       : req.body.writtenDescription,
   condition:
-    req.body.condition === undefined ? undefined : req.body.condition,
+  req.body.condition === undefined || req.body.condition === ""
+    ? undefined
+    : req.body.condition,
   assetType:
     req.body.assetType === undefined ? undefined : req.body.assetType,
   brand:

@@ -1,3 +1,6 @@
+
+
+// models/Asset.js
 import mongoose from "mongoose";
 
 const assetImageSchema = new mongoose.Schema(
@@ -23,10 +26,11 @@ const assetSchema = new mongoose.Schema(
     writtenDescription: { type: String, default: null, trim: true },
 
     condition: {
-      type: String,
-      enum: ["New", "Used", "Damaged"],
-      default: null,
-    },
+  type: String,
+  enum: ["New", "Used", "Damaged"],
+  required: false,
+  default: undefined,
+},
 
     assetType: {
       type: String,

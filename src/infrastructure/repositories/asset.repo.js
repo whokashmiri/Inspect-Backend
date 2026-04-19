@@ -77,7 +77,7 @@ export const assetRepository = {
     const asset = new Asset({
       name,
       writtenDescription,
-      condition: condition ?? null,
+      condition: condition ?? undefined,
       assetType: assetType || "Other",
       brand: brand ?? null,
       model: model ?? null,
@@ -135,8 +135,8 @@ export const assetRepository = {
   }
 
   if (condition !== undefined) {
-    asset.condition = condition ?? null;
-  }
+  asset.condition = condition;
+}
 
   if (assetType !== undefined) {
     asset.assetType = assetType || "Other";

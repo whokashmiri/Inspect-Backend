@@ -89,7 +89,7 @@ async createAsset({
     const normalizedCondition =
       condition && ["New", "Used", "Damaged"].includes(condition)
         ? condition
-        : null;
+        : undefined;
 
     const normalizedBrand =
       normalizedAssetType === "Vehicle" ? brand?.trim() || null : null;
@@ -204,7 +204,7 @@ async updateAsset({
   const normalizedCondition =
     condition && ["New", "Used", "Damaged"].includes(condition)
       ? condition
-      : null;
+      : undefined;
 
   const normalizedBrand =
     normalizedAssetType === "Vehicle" ? brand?.trim() || null : null;
@@ -247,7 +247,7 @@ async updateAsset({
         : writtenDescription?.trim() || null,
     
     condition:
-  condition === undefined
+    condition === undefined
     ? existingAsset.condition
     : normalizedCondition,
 
