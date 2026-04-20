@@ -48,7 +48,7 @@ export const createAssetSchema = z.object({
   ),
   condition: z.preprocess(
     emptyToUndefined,
-    z.enum(["New", "Used", "Damaged"]).optional().nullable()
+    z.enum(["New", "Used", "Damaged","Good"]).optional().nullable()
   ),
   assetType: z.preprocess(
     emptyToUndefined,
@@ -56,6 +56,7 @@ export const createAssetSchema = z.object({
   ),
   brand: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
   model: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
+  code: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
   isDone: z.preprocess(
     (value) => {
       if (value === "true") return true;
@@ -65,6 +66,16 @@ export const createAssetSchema = z.object({
     },
     z.boolean().optional().nullable()
   ),
+isPresent: z.preprocess(
+  (value) => {
+    if (value === "true") return true;
+    if (value === "false") return false;
+    if (value === "") return undefined;
+    return value;
+  },
+  z.boolean().optional().nullable()
+),
+
   manufactureYear: z.preprocess(
     emptyToUndefined,
     z.string().optional().nullable()
@@ -82,7 +93,7 @@ export const updateAssetSchema = z.object({
   ),
   condition: z.preprocess(
     emptyToUndefined,
-    z.enum(["New", "Used", "Damaged"]).optional().nullable()
+    z.enum(["New", "Used", "Damaged" ,"Good"]).optional().nullable()
   ),
   assetType: z.preprocess(
     emptyToUndefined,
@@ -90,6 +101,7 @@ export const updateAssetSchema = z.object({
   ),
   brand: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
   model: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
+  code: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
   isDone: z.preprocess(
     (value) => {
       if (value === "true") return true;
@@ -99,6 +111,16 @@ export const updateAssetSchema = z.object({
     },
     z.boolean().optional().nullable()
   ),
+ isPresent: z.preprocess(
+  (value) => {
+    if (value === "true") return true;
+    if (value === "false") return false;
+    if (value === "") return undefined;
+    return value;
+  },
+  z.boolean().optional().nullable()
+),
+
   manufactureYear: z.preprocess(
     emptyToUndefined,
     z.string().optional().nullable()

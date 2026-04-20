@@ -1,5 +1,3 @@
-
-
 // models/Asset.js
 import mongoose from "mongoose";
 
@@ -20,17 +18,19 @@ const assetVoiceNoteSchema = new mongoose.Schema(
   { timestamps: { createdAt: "createdAt", updatedAt: false } }
 );
 
+
+
 const assetSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     writtenDescription: { type: String, default: null, trim: true },
 
     condition: {
-  type: String,
-  enum: ["New", "Used", "Damaged"],
-  required: false,
-  default: undefined,
-},
+      type: String,
+      enum: ["New", "Used", "Damaged" , "Good"],
+      required: false,
+      default: "Good",
+    },
 
     assetType: {
       type: String,
@@ -43,6 +43,14 @@ const assetSchema = new mongoose.Schema(
       default: null,
       trim: true,
     },
+
+      code: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+
+
     model: {
       type: String,
       default: null,
@@ -59,6 +67,11 @@ const assetSchema = new mongoose.Schema(
       type: String,
       default: null,
       trim: true,
+    },
+
+    isPresent: {
+      type: Boolean,
+      default: true,
     },
 
     project: {
@@ -86,6 +99,11 @@ const assetSchema = new mongoose.Schema(
   },
 
   { timestamps: true }
+);
+
+assetSchema.index(
+  { project: 1, code: 1 },
+  { unique: true, partialFilterExpression: { code: { $type: "string" } } }
 );
 
 export const Asset =

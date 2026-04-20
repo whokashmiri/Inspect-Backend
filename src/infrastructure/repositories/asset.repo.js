@@ -40,14 +40,16 @@ const mapAsset = (doc) => ({
   id: toId(doc._id),
   name: doc.name,
   writtenDescription: doc.writtenDescription ?? null,
-  condition: doc.condition ?? null,
+  condition: doc.condition ?? "Good",
   assetType: doc.assetType ?? "Other",
   brand: doc.brand ?? null,
   model: doc.model ?? null,
+  code: doc.code ?? null,
   manufactureYear: doc.manufactureYear ?? null,
-    kilometersDriven: doc.kilometersDriven ?? null,
-    isDone: doc.isDone ?? false,
-    folderId: toId(doc.folder),
+  kilometersDriven: doc.kilometersDriven ?? null,
+  isDone: doc.isDone ?? false,
+  folderId: toId(doc.folder),
+   isPresent: doc.isPresent ?? true,
 
   projectId: toId(doc.project),
   createdAt: doc.createdAt,
@@ -65,9 +67,11 @@ export const assetRepository = {
     assetType,
     brand,
     model,
+    code,
     manufactureYear,
     kilometersDriven,
     isDone,
+    isPresent,
     images,
     voiceNotes,
     projectId,
@@ -77,10 +81,11 @@ export const assetRepository = {
     const asset = new Asset({
       name,
       writtenDescription,
-      condition: condition ?? undefined,
+      condition: condition ?? "Good",
       assetType: assetType || "Other",
       brand: brand ?? null,
       model: model ?? null,
+      code: code ?? null,
       manufactureYear: manufactureYear ?? null,
       kilometersDriven: kilometersDriven ?? null,
       project: projectId,
@@ -96,6 +101,7 @@ export const assetRepository = {
         duration: item.duration ?? null,
       })),
       isDone: isDone ?? false,
+      isPresent: isPresent ?? true,
     });
 
     await asset.save();
@@ -120,9 +126,11 @@ export const assetRepository = {
     assetType,
     brand,
     model,
+    code,
     manufactureYear,
     kilometersDriven,
     isDone,
+    isPresent,
     images,
     voiceNotes,
   }
@@ -145,6 +153,9 @@ export const assetRepository = {
   if (brand !== undefined) {
     asset.brand = brand ?? null;
   }
+  if (code !== undefined) {
+  asset.code = code ?? null;
+}
 
   if (model !== undefined) {
     asset.model = model ?? null;
@@ -161,6 +172,10 @@ export const assetRepository = {
   if (isDone !== undefined) {
     asset.isDone = isDone;
   }
+
+  if (isPresent !== undefined) {
+  asset.isPresent = isPresent;
+}
 
   if (images !== undefined) {
     asset.images = (images || []).map((item) => ({
@@ -181,6 +196,21 @@ export const assetRepository = {
   await asset.populate("createdBy", "fullName email");
 
   return mapAsset(asset.toObject());
+},
+
+async findByProjectIdAndCode(projectId, code) {
+  console.log("FIND BY PROJECT+CODE:", {
+  projectId,
+  code,
+});
+  const asset = await Asset.findOne({
+    project: projectId,
+    code,
+  })
+    .populate("createdBy", "fullName email")
+    .lean();
+
+  return asset ? mapAsset(asset) : null;
 },
 
   async findByProjectIdAndFolderId(projectId, folderId = null) {

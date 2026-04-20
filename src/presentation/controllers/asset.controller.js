@@ -1,6 +1,16 @@
 // controllers/asset.controller.js
 import { folderAssetService } from "../../application/folder/asset.service.js";
 
+const parseBoolean = (value, fallback = undefined) => {
+  if (value === undefined || value === null || value === "") return fallback;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    if (value.toLowerCase() === "true") return true;
+    if (value.toLowerCase() === "false") return false;
+  }
+  return fallback;
+};
+
 export const folderAssetController = {
   async createFolder(req, res) {
     const result = await folderAssetService.createFolder({
@@ -21,64 +31,63 @@ export const folderAssetController = {
       userId: req.userId,
       projectId: req.params.projectId,
       folderId: req.body.folderId || null,
+      code: req.body.code || null,
       name: req.body.name,
       writtenDescription: req.body.writtenDescription || null,
       condition:
         req.body.condition === undefined || req.body.condition === ""
-        ? undefined
-        : req.body.condition,
+          ? undefined
+          : req.body.condition,
       assetType: req.body.assetType || "Other",
       brand: req.body.brand || null,
       model: req.body.model || null,
       manufactureYear: req.body.manufactureYear || null,
       kilometersDriven: req.body.kilometersDriven || null,
-      isDone: req.body.isDone ?? false,
+      isDone: parseBoolean(req.body.isDone, false),
+      isPresent: parseBoolean(req.body.isPresent, true),
       imageFiles: req.files?.images || [],
-
       voiceNoteFiles: req.files?.voiceNotes || [],
     });
 
     return res.status(201).json(result);
   },
 
- async updateAsset(req, res) {
+  async updateAsset(req, res) {
     console.log("BODY:", req.body);
     console.log("FILES:", req.files);
 
- const result = await folderAssetService.updateAsset({
-  userId: req.userId,
-  assetId: req.params.assetId,
-  writtenDescription:
-    req.body.writtenDescription === undefined
-      ? undefined
-      : req.body.writtenDescription,
-  condition:
-  req.body.condition === undefined || req.body.condition === ""
-    ? undefined
-    : req.body.condition,
-  assetType:
-    req.body.assetType === undefined ? undefined : req.body.assetType,
-  brand:
-    req.body.brand === undefined ? undefined : req.body.brand,
-  model:
-    req.body.model === undefined ? undefined : req.body.model,
-  manufactureYear:
-    req.body.manufactureYear === undefined
-      ? undefined
-      : req.body.manufactureYear,
-  kilometersDriven:
-    req.body.kilometersDriven === undefined
-      ? undefined
-      : req.body.kilometersDriven,
-  isDone:
-    req.body.isDone === undefined
-      ? undefined
-      : req.body.isDone,
-  imageFiles: req.files?.images || [],
-  voiceNoteFiles: req.files?.voiceNotes || [],
-});
-  return res.status(200).json(result);
-},
+    const result = await folderAssetService.updateAsset({
+      userId: req.userId,
+      assetId: req.params.assetId,
+      writtenDescription:
+        req.body.writtenDescription === undefined
+          ? undefined
+          : req.body.writtenDescription,
+      condition:
+        req.body.condition === undefined || req.body.condition === ""
+          ? undefined
+          : req.body.condition,
+      assetType:
+        req.body.assetType === undefined ? undefined : req.body.assetType,
+      brand: req.body.brand === undefined ? undefined : req.body.brand,
+      model: req.body.model === undefined ? undefined : req.body.model,
+      code: req.body.code === undefined ? undefined : req.body.code,
+      manufactureYear:
+        req.body.manufactureYear === undefined
+          ? undefined
+          : req.body.manufactureYear,
+      kilometersDriven:
+        req.body.kilometersDriven === undefined
+          ? undefined
+          : req.body.kilometersDriven,
+      isDone: parseBoolean(req.body.isDone, undefined),
+      isPresent: parseBoolean(req.body.isPresent, undefined),
+      imageFiles: req.files?.images || [],
+      voiceNoteFiles: req.files?.voiceNotes || [],
+    });
+
+    return res.status(200).json(result);
+  },
 
   async listContents(req, res) {
     const result = await folderAssetService.listContents({
@@ -89,4 +98,18 @@ export const folderAssetController = {
 
     return res.status(200).json(result);
   },
+
+
+
+  async getAssetByCode(req, res) {
+    console.log("REQ QUERY CODE:", req.query.code);
+console.log("REQ PARAM PROJECT:", req.params.projectId);
+  const result = await folderAssetService.getAssetByCode({
+    userId: req.userId,
+    projectId: req.params.projectId,
+    code: req.query.code,
+  });
+
+  return res.status(200).json(result);
+}
 };

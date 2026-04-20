@@ -42,4 +42,10 @@ router.patch(
   asyncWrap(folderAssetController.updateAsset)
 );
 
+router.get(
+  "/:projectId/assets/by-code",
+  authenticate,
+  asyncWrap(folderAssetController.getAssetByCode)
+);
+
 export default router;

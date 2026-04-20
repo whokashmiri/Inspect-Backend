@@ -62,6 +62,8 @@ async createAsset({
     assetType,
     brand,
     model,
+    isPresent,
+    code,
     manufactureYear,
     kilometersDriven,
     isDone,
@@ -84,10 +86,10 @@ async createAsset({
         throw new AppError("Folder not found in this project", 404);
       }
     }
-
+    const normalizedCode = code?.trim() || null;
     const normalizedAssetType = assetType === "Vehicle" ? "Vehicle" : "Other";
     const normalizedCondition =
-      condition && ["New", "Used", "Damaged"].includes(condition)
+      condition && ["New", "Used", "Damaged" , "Good"].includes(condition)
         ? condition
         : undefined;
 
@@ -128,9 +130,11 @@ async createAsset({
       assetType: normalizedAssetType,
       brand: normalizedBrand,
       model: normalizedModel,
+      code: normalizedCode,
       manufactureYear: normalizedManufactureYear,
       kilometersDriven: normalizedKilometersDriven,
       isDone: isDone !== undefined ? isDone : false,
+      isPresent: isPresent !== undefined ? isPresent : true,
       images: uploadedImages,
       voiceNotes: uploadedVoiceNotes,
       projectId,
@@ -179,8 +183,10 @@ async updateAsset({
   assetType,
   brand,
   model,
+  code,
   manufactureYear,
   kilometersDriven,
+  isPresent,
   isDone,
   imageFiles,
   voiceNoteFiles,
@@ -198,7 +204,7 @@ async updateAsset({
   }
 
   await getAccessibleProject(existingAsset.projectId, user);
-
+  const normalizedCode = code?.trim() || null;
   const normalizedAssetType = assetType === "Vehicle" ? "Vehicle" : "Other";
 
   const normalizedCondition =
@@ -265,6 +271,10 @@ model:
   model === undefined
     ? existingAsset.model
     : normalizedModel,
+  code:
+    code === undefined
+      ? existingAsset.code
+      : normalizedCode,
 
 manufactureYear:
   manufactureYear === undefined
@@ -279,11 +289,38 @@ manufactureYear:
       isDone === undefined
         ? existingAsset.isDone
         : isDone,
+    isPresent: 
+    isPresent === undefined
+      ? existingAsset.isPresent
+      : isPresent,
     images,
     voiceNotes,
   });
 
   return { asset: updatedAsset };
+},
+
+
+async getAssetByCode({ userId, projectId, code }) {
+  if (!code?.trim()) throw new AppError("Code is required", 400);
+  console.log("LOOKUP CODE:", code);
+
+  const user = await userRepository.findById(userId);
+  if (!user) throw new AppError("User not found", 404);
+  if (!user.company?.id) {
+    throw new AppError("User is not linked to a company", 400);
+  }
+
+  await getAccessibleProject(projectId, user);
+
+  const asset = await assetRepository.findByProjectIdAndCode(
+    projectId,
+    code.trim()
+  );
+
+  if (!asset) throw new AppError("Asset not found", 404);
+
+  return { asset };
 }
 
 };
