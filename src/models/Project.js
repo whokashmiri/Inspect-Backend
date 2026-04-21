@@ -3,21 +3,30 @@ import mongoose from "mongoose";
 const projectSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-    status: { type: String, default: "New", trim: true },
-    isFavorite: { type: Boolean, default: false },
-    company: {
+
+    companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       required: true,
     },
-    createdBy: {
+
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
+
+    workflowStatus: {
+      type: String,
+      required: true,
+      default: "new",
+      trim: true,
+    },
   },
-  { timestamps: { createdAt: "createdAt", updatedAt: false } }
+  {
+    timestamps: true, // createdAt + updatedAt
+  }
 );
 
 export const Project =
-  mongoose.models.Project || mongoose.model("Project", projectSchema);
+  mongoose.models.Project || mongoose.model("mv_projects", projectSchema);

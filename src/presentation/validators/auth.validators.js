@@ -1,24 +1,13 @@
 import { z } from "zod";
 
-export const signupSchema = z.object({
-  fullName: z.string().trim().min(1, "Full name is required"),
-  role: z.enum(["Manager", "Inspector", "Valuator"], {
-    errorMap: () => ({ message: "Role is required" }),
-  }),
-  email: z.string().trim().email("Invalid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  companyName: z.string().trim().min(1, "Company name is required"),
-});
-
 export const loginSchema = z.object({
-  email: z.string().trim().email("Invalid email"),
+  username: z.string().trim().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
 export const refreshSchema = z.object({
   refreshToken: z.string().min(1, "Refresh token is required"),
 });
-
 
 const offlineIdSchema = z
   .string()
@@ -36,7 +25,6 @@ export const createFolderSchema = z.object({
   parentId: optionalOfflineId,
 });
 
-
 const emptyToUndefined = (value) => (value === "" ? undefined : value);
 
 export const createAssetSchema = z.object({
@@ -48,7 +36,7 @@ export const createAssetSchema = z.object({
   ),
   condition: z.preprocess(
     emptyToUndefined,
-    z.enum(["New", "Used", "Damaged","Good"]).optional().nullable()
+    z.enum(["New", "Used", "Damaged", "Good"]).optional().nullable()
   ),
   assetType: z.preprocess(
     emptyToUndefined,
@@ -66,16 +54,15 @@ export const createAssetSchema = z.object({
     },
     z.boolean().optional().nullable()
   ),
-isPresent: z.preprocess(
-  (value) => {
-    if (value === "true") return true;
-    if (value === "false") return false;
-    if (value === "") return undefined;
-    return value;
-  },
-  z.boolean().optional().nullable()
-),
-
+  isPresent: z.preprocess(
+    (value) => {
+      if (value === "true") return true;
+      if (value === "false") return false;
+      if (value === "") return undefined;
+      return value;
+    },
+    z.boolean().optional().nullable()
+  ),
   manufactureYear: z.preprocess(
     emptyToUndefined,
     z.string().optional().nullable()
@@ -93,7 +80,7 @@ export const updateAssetSchema = z.object({
   ),
   condition: z.preprocess(
     emptyToUndefined,
-    z.enum(["New", "Used", "Damaged" ,"Good"]).optional().nullable()
+    z.enum(["New", "Used", "Damaged", "Good"]).optional().nullable()
   ),
   assetType: z.preprocess(
     emptyToUndefined,
@@ -111,16 +98,15 @@ export const updateAssetSchema = z.object({
     },
     z.boolean().optional().nullable()
   ),
- isPresent: z.preprocess(
-  (value) => {
-    if (value === "true") return true;
-    if (value === "false") return false;
-    if (value === "") return undefined;
-    return value;
-  },
-  z.boolean().optional().nullable()
-),
-
+  isPresent: z.preprocess(
+    (value) => {
+      if (value === "true") return true;
+      if (value === "false") return false;
+      if (value === "") return undefined;
+      return value;
+    },
+    z.boolean().optional().nullable()
+  ),
   manufactureYear: z.preprocess(
     emptyToUndefined,
     z.string().optional().nullable()

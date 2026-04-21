@@ -3,14 +3,14 @@ import { authController } from "../controllers/auth.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import {
-  signupSchema,
+  // signupSchema,
   loginSchema,
   refreshSchema,
 } from "../validators/auth.validators.js";
 
 const router = Router();
 
-router.post("/signup", validate(signupSchema), asyncWrap(authController.signup));
+// router.post("/signup", validate(signupSchema), asyncWrap(authController.signup));
 router.post("/login", validate(loginSchema), asyncWrap(authController.login));
 router.post(
   "/refresh",

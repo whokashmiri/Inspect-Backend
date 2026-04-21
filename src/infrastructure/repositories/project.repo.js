@@ -15,61 +15,70 @@ const toId = (value) => {
 
 const mapCompany = (company) => {
   if (!company) return null;
-  return { id: toId(company._id ?? company), name: company.name ?? null };
+  return {
+    id: toId(company._id ?? company),
+    name: company.name ?? null,
+  };
 };
 
-const mapCreatedBy = (user) => {
+const mapUser = (user) => {
   if (!user) return null;
   return {
     id: toId(user._id ?? user),
-    fullName: user.fullName ?? null,
-    email: user.email ?? null,
+    username: user.username ?? null,
+    role: user.role ?? null,
   };
 };
 
 const mapProject = (doc) => {
   if (!doc) return null;
+
   return {
     id: toId(doc._id),
     name: doc.name,
-    status: doc.status,
-    isFavorite: doc.isFavorite,
     createdAt: doc.createdAt,
-    companyId: toId(doc.company),
-    createdById: toId(doc.createdBy),
-    company: mapCompany(doc.company),
-    createdBy: mapCreatedBy(doc.createdBy),
+    updatedAt: doc.updatedAt ?? null,
+    workflowStatus: doc.workflowStatus,
+    companyId: toId(doc.companyId),
+    userId: toId(doc.userId),
+    company: mapCompany(doc.companyId),
+    user: mapUser(doc.userId),
   };
 };
 
 const populateProjectQuery = (query) =>
-  query.populate("company", "name").populate("createdBy", "fullName email");
+  query
+    .populate("companyId", "name")
+    .populate("userId", "username role");
 
 export const projectRepository = {
-  async create({ name, companyId, createdById }) {
+  async create({ name, companyId, userId, workflowStatus = "new" }) {
     const project = new Project({
       name,
-      company: companyId,
-      createdBy: createdById,
+      companyId,
+      userId,
+      workflowStatus,
     });
+
     await project.save();
-    await project.populate("company", "name");
-    await project.populate("createdBy", "fullName email");
+    await project.populate("companyId", "name");
+    await project.populate("userId", "username role");
+
     return mapProject(project.toObject());
   },
 
   async findByCompanyId(companyId) {
-    const query = Project.find({ company: companyId })
-      .sort({ createdAt: -1 });
+    const query = Project.find({ companyId }).sort({ createdAt: -1 });
     const projects = await populateProjectQuery(query).lean();
     return projects.map(mapProject);
   },
 
-  async findByCompanyIdAndCreatedById(companyId, createdById) {
+  async findByCompanyIdAndUserId(companyId, userId) {
     const query = Project.find({
-      company: companyId,
-      createdBy: createdById,
+      companyId,
+      userId,
     }).sort({ createdAt: -1 });
+
     const projects = await populateProjectQuery(query).lean();
     return projects.map(mapProject);
   },

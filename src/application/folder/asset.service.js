@@ -11,11 +11,15 @@ async function getAccessibleProject(projectId, user) {
   const project = await projectRepository.findById(projectId);
   if (!project) throw new AppError("Project not found", 404);
 
-  if (project.companyId !== user.company.id) {
-    throw new AppError("Forbidden", 403);
-  }
+  // ✅ normalize company ids before comparing
+  const projectCompanyId = project.companyId.toString();
+  const userCompanyId =
+    typeof user.company === "object"
+      ? (user.company.id || user.company._id).toString()
+      : user.company.toString();
 
-  if (user.role !== "Manager" && project.createdById !== user.id) {
+  // ✅ only check same company
+  if (projectCompanyId !== userCompanyId) {
     throw new AppError("Forbidden", 403);
   }
 

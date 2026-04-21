@@ -8,31 +8,33 @@ export const projectService = {
 
     const user = await userRepository.findById(userId);
     if (!user) throw new AppError("User not found", 404);
-    if (!user.company?.id) throw new AppError("User is not linked to a company", 400);
+    if (!user.company?.id) {
+      throw new AppError("User is not linked to a company", 400);
+    }
 
     const project = await projectRepository.create({
       name: name.trim(),
       companyId: user.company.id,
-      createdById: user.id,
+      userId: user.id,
+      workflowStatus: "new",
     });
 
     return { project };
   },
 
-  async list(userId) {
-    const user = await userRepository.findById(userId);
-    if (!user) throw new AppError("User not found", 404);
-    if (!user.company?.id) throw new AppError("User is not linked to a company", 400);
+async list(userId) {
+  const user = await userRepository.findById(userId);
+  if (!user) throw new AppError("User not found", 404);
 
-    const isManager = user.role === "Manager";
+  if (!user.company) {
+    throw new AppError("User is not linked to a company", 400);
+  }
 
-    const projects = isManager
-      ? await projectRepository.findByCompanyId(user.company.id)
-      : await projectRepository.findByCompanyIdAndCreatedById(
-          user.company.id,
-          user.id
-        );
+  // ✅ Extract id safely
+  const companyId = user.company.id || user.company._id;
 
-    return { projects };
-  },
+  const projects = await projectRepository.findByCompanyId(companyId);
+
+  return { projects };
+}
 };

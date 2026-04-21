@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import { RefreshToken } from "../../models/RefreshToken.js";
 import { User } from "../../models/User.js";
+import { Company } from "../../models/Company.js";
+
 
 const toId = (value) => {
   if (!value) return null;
@@ -25,23 +27,30 @@ const mapCompany = (company) => {
 
 const mapUser = (doc, { includePasswordHash = false } = {}) => {
   if (!doc) return null;
+
   const user = {
     id: toId(doc._id),
-    email: doc.email,
-    fullName: doc.fullName,
+    username: doc.username,
+    usernameLower: doc.usernameLower,
     role: doc.role,
     createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt ?? null,
+    lastLoginAt: doc.lastLoginAt ?? null,
+    isBlocked: doc.isBlocked ?? false,
+    blockedAt: doc.blockedAt ?? null,
     company: mapCompany(doc.company),
   };
+
   if (includePasswordHash) {
     user.passwordHash = doc.passwordHash;
   }
+
   return user;
 };
 
 export const userRepository = {
-  async findByEmail(email) {
-    const query = User.findOne({ email });
+  async findByUsername(usernameLower) {
+    const query = User.findOne({ usernameLower });
     const user = await query.populate("company", "name").lean();
     return mapUser(user, { includePasswordHash: true });
   },
@@ -53,25 +62,18 @@ export const userRepository = {
     return mapUser(user);
   },
 
-  async findManagerByCompanyId(companyId, options = {}) {
-    if (!companyId) return null;
-    const query = User.findOne({ company: companyId, role: "Manager" });
-    if (options.session) query.session(options.session);
-    const manager = await query.lean();
-    return mapUser(manager);
-  },
+  async updateLastLogin(id) {
+    if (!id) return null;
 
-  async create({ email, fullName, role, passwordHash, companyId }, options = {}) {
-    const user = new User({
-      email,
-      fullName,
-      role,
-      passwordHash,
-      company: companyId,
-    });
-    await user.save({ session: options.session });
-    await user.populate("company", "name");
-    return mapUser(user.toObject());
+    const user = await User.findByIdAndUpdate(
+      id,
+      { lastLoginAt: new Date() },
+      { new: true }
+    )
+      .populate("company", "name")
+      .lean();
+
+    return mapUser(user);
   },
 
   async saveRefreshToken(userId, token, expiresAt) {
@@ -85,6 +87,7 @@ export const userRepository = {
   async findRefreshToken(token) {
     const doc = await RefreshToken.findOne({ token }).lean();
     if (!doc) return null;
+
     return {
       id: toId(doc._id),
       token: doc.token,
