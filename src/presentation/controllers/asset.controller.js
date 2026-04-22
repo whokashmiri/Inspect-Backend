@@ -42,8 +42,8 @@ export const folderAssetController = {
       projectId: req.params.projectId,
 
       // new field
-      parentSubProjectId:
-        req.body.parentSubProjectId ?? req.body.folderId ?? null,
+      parent:
+        req.body.parent ?? req.body.folderId ?? null,
 
       code: req.body.code || null,
       name: req.body.name,

@@ -80,7 +80,7 @@ export const folderAssetService = {
   async createAsset({
     userId,
     projectId,
-    parentSubProjectId,
+    parent,
     folderId, // temporary compatibility if frontend still sends folderId
     name,
     writtenDescription,
@@ -106,7 +106,7 @@ export const folderAssetService = {
 
     await getAccessibleProject(projectId, user);
 
-    const resolvedParentSubProjectId = parentSubProjectId ?? folderId ?? null;
+    const resolvedParentSubProjectId = parent ?? folderId ?? null;
 
     if (resolvedParentSubProjectId) {
       const folder = await folderRepository.findById(resolvedParentSubProjectId);
@@ -160,7 +160,7 @@ export const folderAssetService = {
       images: uploadedImages,
       voiceNotes: uploadedVoiceNotes,
       projectId,
-      parentSubProjectId: resolvedParentSubProjectId,
+      parent: resolvedParentSubProjectId,
       isAssetFolder: true,
       createdBy: user.id,
     });

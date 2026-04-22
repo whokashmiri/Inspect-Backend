@@ -51,7 +51,7 @@ const mapAsset = (doc) => ({
   isPresent: doc.isPresent ?? true,
 
   // ✅ NEW STRUCTURE
-  parentSubProjectId: toId(doc.parentSubProjectId),
+  parent: toId(doc.parent),
   projectId: toId(doc.projectId),
 
   createdAt: doc.createdAt,
@@ -79,7 +79,7 @@ export const assetRepository = {
     images,
     voiceNotes,
     projectId,
-    parentSubProjectId,
+    parent,
     createdBy,
   }) {
     const asset = new Asset({
@@ -94,7 +94,7 @@ export const assetRepository = {
       kilometersDriven: kilometersDriven ?? null,
 
       projectId,
-      parentSubProjectId: parentSubProjectId || null,
+      parent: parent || null,
       createdBy,
 
       images: (images || []).map((item) => ({
@@ -157,11 +157,11 @@ export const assetRepository = {
   // ✅ UPDATED FUNCTION NAME
   async findByProjectIdAndParentSubProjectId(
     projectId,
-    parentSubProjectId = null
+    parent = null
   ) {
     const assets = await Asset.find({
       projectId,
-      parentSubProjectId,
+      parent,
     })
       .sort({ createdAt: -1 })
       .populate("createdBy", "fullName email")

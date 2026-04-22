@@ -90,7 +90,7 @@ const assetSchema = new mongoose.Schema(
     },
 
     // old: folder
-    parentSubProjectId: {
+    parent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Folder",
       default: null,

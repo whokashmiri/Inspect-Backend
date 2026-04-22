@@ -45,10 +45,10 @@ export const createAssetSchema = z.object({
   name: z.string().min(1, "Asset name is required"),
 
   // new field
-  parentSubProjectId: optionalOfflineId,
+  parent: optionalOfflineId,
 
   // temporary backward compatibility
-  parentSubProjectId: optionalOfflineId.optional(),
+  parent: optionalOfflineId.optional(),
 
   writtenDescription: z.preprocess(
     emptyToUndefined,
