@@ -4,11 +4,21 @@ import { folderAssetService } from "../../application/folder/asset.service.js";
 const parseBoolean = (value, fallback = undefined) => {
   if (value === undefined || value === null || value === "") return fallback;
   if (typeof value === "boolean") return value;
+
   if (typeof value === "string") {
-    if (value.toLowerCase() === "true") return true;
-    if (value.toLowerCase() === "false") return false;
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
   }
+
   return fallback;
+};
+
+const normalizeAssetType = (value, fallback = undefined) => {
+  if (value === undefined || value === null || value === "") return fallback;
+
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === "vehicle" ? "vehicle" : "other";
 };
 
 export const folderAssetController = {
@@ -30,21 +40,30 @@ export const folderAssetController = {
     const result = await folderAssetService.createAsset({
       userId: req.userId,
       projectId: req.params.projectId,
-      folderId: req.body.folderId || null,
+
+      // new field
+      parentSubProjectId:
+        req.body.parentSubProjectId ?? req.body.folderId ?? null,
+
       code: req.body.code || null,
       name: req.body.name,
       writtenDescription: req.body.writtenDescription || null,
+
       condition:
         req.body.condition === undefined || req.body.condition === ""
           ? undefined
           : req.body.condition,
-      assetType: req.body.assetType || "Other",
+
+      assetType: normalizeAssetType(req.body.assetType, "other"),
+
       brand: req.body.brand || null,
       model: req.body.model || null,
       manufactureYear: req.body.manufactureYear || null,
       kilometersDriven: req.body.kilometersDriven || null,
+
       isDone: parseBoolean(req.body.isDone, false),
       isPresent: parseBoolean(req.body.isPresent, true),
+
       imageFiles: req.files?.images || [],
       voiceNoteFiles: req.files?.voiceNotes || [],
     });
@@ -59,29 +78,41 @@ export const folderAssetController = {
     const result = await folderAssetService.updateAsset({
       userId: req.userId,
       assetId: req.params.assetId,
+
+      name: req.body.name === undefined ? undefined : req.body.name,
+
       writtenDescription:
         req.body.writtenDescription === undefined
           ? undefined
           : req.body.writtenDescription,
+
       condition:
         req.body.condition === undefined || req.body.condition === ""
           ? undefined
           : req.body.condition,
+
       assetType:
-        req.body.assetType === undefined ? undefined : req.body.assetType,
+        req.body.assetType === undefined
+          ? undefined
+          : normalizeAssetType(req.body.assetType),
+
       brand: req.body.brand === undefined ? undefined : req.body.brand,
       model: req.body.model === undefined ? undefined : req.body.model,
       code: req.body.code === undefined ? undefined : req.body.code,
+
       manufactureYear:
         req.body.manufactureYear === undefined
           ? undefined
           : req.body.manufactureYear,
+
       kilometersDriven:
         req.body.kilometersDriven === undefined
           ? undefined
           : req.body.kilometersDriven,
+
       isDone: parseBoolean(req.body.isDone, undefined),
       isPresent: parseBoolean(req.body.isPresent, undefined),
+
       imageFiles: req.files?.images || [],
       voiceNoteFiles: req.files?.voiceNotes || [],
     });
@@ -99,17 +130,16 @@ export const folderAssetController = {
     return res.status(200).json(result);
   },
 
-
-
   async getAssetByCode(req, res) {
     console.log("REQ QUERY CODE:", req.query.code);
-console.log("REQ PARAM PROJECT:", req.params.projectId);
-  const result = await folderAssetService.getAssetByCode({
-    userId: req.userId,
-    projectId: req.params.projectId,
-    code: req.query.code,
-  });
+    console.log("REQ PARAM PROJECT:", req.params.projectId);
 
-  return res.status(200).json(result);
-}
+    const result = await folderAssetService.getAssetByCode({
+      userId: req.userId,
+      projectId: req.params.projectId,
+      code: req.query.code,
+    });
+
+    return res.status(200).json(result);
+  },
 };

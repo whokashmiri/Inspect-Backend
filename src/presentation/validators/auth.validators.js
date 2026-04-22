@@ -20,53 +20,70 @@ const optionalOfflineId = z
   .optional()
   .transform((value) => (value === "" || value === null ? null : value ?? null));
 
+const emptyToUndefined = (value) => (value === "" ? undefined : value);
+
+const booleanPreprocess = (value) => {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  if (value === "") return undefined;
+  return value;
+};
+
+const assetTypePreprocess = (value) => {
+  if (value === "" || value === null || value === undefined) return undefined;
+
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === "vehicle" ? "vehicle" : "other";
+};
+
 export const createFolderSchema = z.object({
   name: z.string().min(1, "Folder name is required"),
   parentId: optionalOfflineId,
 });
 
-const emptyToUndefined = (value) => (value === "" ? undefined : value);
-
 export const createAssetSchema = z.object({
   name: z.string().min(1, "Asset name is required"),
-  folderId: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
+
+  // new field
+  parentSubProjectId: optionalOfflineId,
+
+  // temporary backward compatibility
+  parentSubProjectId: optionalOfflineId.optional(),
+
   writtenDescription: z.preprocess(
     emptyToUndefined,
     z.string().optional().nullable()
   ),
+
   condition: z.preprocess(
     emptyToUndefined,
     z.enum(["New", "Used", "Damaged", "Good"]).optional().nullable()
   ),
+
   assetType: z.preprocess(
-    emptyToUndefined,
-    z.enum(["Vehicle", "Other"]).optional()
+    assetTypePreprocess,
+    z.enum(["vehicle", "other"]).optional()
   ),
+
   brand: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
   model: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
   code: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
+
   isDone: z.preprocess(
-    (value) => {
-      if (value === "true") return true;
-      if (value === "false") return false;
-      if (value === "") return undefined;
-      return value;
-    },
+    booleanPreprocess,
     z.boolean().optional().nullable()
   ),
+
   isPresent: z.preprocess(
-    (value) => {
-      if (value === "true") return true;
-      if (value === "false") return false;
-      if (value === "") return undefined;
-      return value;
-    },
+    booleanPreprocess,
     z.boolean().optional().nullable()
   ),
+
   manufactureYear: z.preprocess(
     emptyToUndefined,
     z.string().optional().nullable()
   ),
+
   kilometersDriven: z.preprocess(
     emptyToUndefined,
     z.string().optional().nullable()
@@ -74,43 +91,42 @@ export const createAssetSchema = z.object({
 });
 
 export const updateAssetSchema = z.object({
+  name: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
+
   writtenDescription: z.preprocess(
     emptyToUndefined,
     z.string().optional().nullable()
   ),
+
   condition: z.preprocess(
     emptyToUndefined,
     z.enum(["New", "Used", "Damaged", "Good"]).optional().nullable()
   ),
+
   assetType: z.preprocess(
-    emptyToUndefined,
-    z.enum(["Vehicle", "Other"]).optional()
+    assetTypePreprocess,
+    z.enum(["vehicle", "other"]).optional()
   ),
+
   brand: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
   model: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
   code: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
+
   isDone: z.preprocess(
-    (value) => {
-      if (value === "true") return true;
-      if (value === "false") return false;
-      if (value === "") return undefined;
-      return value;
-    },
+    booleanPreprocess,
     z.boolean().optional().nullable()
   ),
+
   isPresent: z.preprocess(
-    (value) => {
-      if (value === "true") return true;
-      if (value === "false") return false;
-      if (value === "") return undefined;
-      return value;
-    },
+    booleanPreprocess,
     z.boolean().optional().nullable()
   ),
+
   manufactureYear: z.preprocess(
     emptyToUndefined,
     z.string().optional().nullable()
   ),
+
   kilometersDriven: z.preprocess(
     emptyToUndefined,
     z.string().optional().nullable()

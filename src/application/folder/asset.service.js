@@ -1,5 +1,4 @@
-
-//asset.service.js
+// asset.service.js
 import { AppError } from "../../utils/AppError.js";
 import { userRepository } from "../../infrastructure/repositories/user.repo.js";
 import { projectRepository } from "../../infrastructure/repositories/project.repo.js";
@@ -11,19 +10,42 @@ async function getAccessibleProject(projectId, user) {
   const project = await projectRepository.findById(projectId);
   if (!project) throw new AppError("Project not found", 404);
 
-  // ✅ normalize company ids before comparing
   const projectCompanyId = project.companyId.toString();
   const userCompanyId =
     typeof user.company === "object"
       ? (user.company.id || user.company._id).toString()
       : user.company.toString();
 
-  // ✅ only check same company
   if (projectCompanyId !== userCompanyId) {
     throw new AppError("Forbidden", 403);
   }
 
   return project;
+}
+
+function normalizeAssetType(assetType) {
+  if (!assetType) return "other";
+
+  const value = String(assetType).trim().toLowerCase();
+  return value === "vehicle" ? "vehicle" : "other";
+}
+
+function normalizeCondition(condition) {
+  if (condition === undefined) return undefined;
+  if (condition === null) return null;
+
+  const value = String(condition).trim();
+  return ["New", "Used", "Damaged", "Good"].includes(value) ? value : null;
+}
+
+function normalizeOptionalString(value) {
+  if (value === undefined) return undefined;
+  return value?.trim() || null;
+}
+
+function normalizeVehicleOnlyField(assetType, value) {
+  if (value === undefined) return undefined;
+  return assetType === "vehicle" ? value?.trim() || null : null;
 }
 
 export const folderAssetService = {
@@ -40,7 +62,7 @@ export const folderAssetService = {
 
     if (parentId) {
       const parentFolder = await folderRepository.findById(parentId);
-      if (!parentFolder || parentFolder.projectId !== projectId) {
+      if (!parentFolder || parentFolder.projectId.toString() !== projectId.toString()) {
         throw new AppError("Parent folder not found in this project", 404);
       }
     }
@@ -55,11 +77,11 @@ export const folderAssetService = {
     return { folder };
   },
 
-
-async createAsset({
+  async createAsset({
     userId,
     projectId,
-    folderId,
+    parentSubProjectId,
+    folderId, // temporary compatibility if frontend still sends folderId
     name,
     writtenDescription,
     condition,
@@ -84,33 +106,30 @@ async createAsset({
 
     await getAccessibleProject(projectId, user);
 
-    if (folderId) {
-      const folder = await folderRepository.findById(folderId);
-      if (!folder || folder.projectId !== projectId) {
+    const resolvedParentSubProjectId = parentSubProjectId ?? folderId ?? null;
+
+    if (resolvedParentSubProjectId) {
+      const folder = await folderRepository.findById(resolvedParentSubProjectId);
+      if (!folder || folder.projectId.toString() !== projectId.toString()) {
         throw new AppError("Folder not found in this project", 404);
       }
     }
-    const normalizedCode = code?.trim() || null;
-    const normalizedAssetType = assetType === "Vehicle" ? "Vehicle" : "Other";
-    const normalizedCondition =
-      condition && ["New", "Used", "Damaged" , "Good"].includes(condition)
-        ? condition
-        : undefined;
 
-    const normalizedBrand =
-      normalizedAssetType === "Vehicle" ? brand?.trim() || null : null;
-    const normalizedModel =
-      normalizedAssetType === "Vehicle" ? model?.trim() || null : null;
+    const normalizedAssetType = normalizeAssetType(assetType);
+    const normalizedCondition = normalizeCondition(condition);
+    const normalizedCode = normalizeOptionalString(code);
+    const normalizedWrittenDescription = normalizeOptionalString(writtenDescription);
 
-    const normalizedManufactureYear =
-      normalizedAssetType === "Vehicle"
-        ? manufactureYear?.trim() || null
-        : null;
-
-    const normalizedKilometersDriven =
-      normalizedAssetType === "Vehicle"
-        ? kilometersDriven?.trim() || null
-        : null;
+    const normalizedBrand = normalizeVehicleOnlyField(normalizedAssetType, brand);
+    const normalizedModel = normalizeVehicleOnlyField(normalizedAssetType, model);
+    const normalizedManufactureYear = normalizeVehicleOnlyField(
+      normalizedAssetType,
+      manufactureYear
+    );
+    const normalizedKilometersDriven = normalizeVehicleOnlyField(
+      normalizedAssetType,
+      kilometersDriven
+    );
 
     const uploadKey = `${projectId}_${Date.now()}`;
 
@@ -126,10 +145,9 @@ async createAsset({
       )
     );
 
-
     const asset = await assetRepository.create({
       name: name.trim(),
-      writtenDescription: writtenDescription?.trim() || null,
+      writtenDescription: normalizedWrittenDescription,
       condition: normalizedCondition,
       assetType: normalizedAssetType,
       brand: normalizedBrand,
@@ -142,8 +160,9 @@ async createAsset({
       images: uploadedImages,
       voiceNotes: uploadedVoiceNotes,
       projectId,
-      folderId: folderId || null,
-      createdById: user.id,
+      parentSubProjectId: resolvedParentSubProjectId,
+      isAssetFolder: true,
+      createdBy: user.id,
     });
 
     return { asset };
@@ -160,14 +179,17 @@ async createAsset({
 
     if (parentId) {
       const folder = await folderRepository.findById(parentId);
-      if (!folder || folder.projectId !== projectId) {
+      if (!folder || folder.projectId.toString() !== projectId.toString()) {
         throw new AppError("Folder not found in this project", 404);
       }
     }
 
     const [folders, assets] = await Promise.all([
       folderRepository.findByProjectIdAndParentId(projectId, parentId || null),
-      assetRepository.findByProjectIdAndFolderId(projectId, parentId || null),
+      assetRepository.findByProjectIdAndParentSubProjectId(
+        projectId,
+        parentId || null
+      ),
     ]);
 
     return {
@@ -177,154 +199,148 @@ async createAsset({
     };
   },
 
+  async updateAsset({
+    userId,
+    assetId,
+    name,
+    writtenDescription,
+    condition,
+    assetType,
+    brand,
+    model,
+    code,
+    manufactureYear,
+    kilometersDriven,
+    isPresent,
+    isDone,
+    imageFiles,
+    voiceNoteFiles,
+  }) {
+    const user = await userRepository.findById(userId);
+    if (!user) throw new AppError("User not found", 404);
+    if (!user.company?.id) {
+      throw new AppError("User is not linked to a company", 400);
+    }
 
+    const existingAsset = await assetRepository.findById(assetId);
+    if (!existingAsset) {
+      throw new AppError("Asset not found", 404);
+    }
 
-async updateAsset({
-  userId,
-  assetId,
-  writtenDescription,
-  condition,
-  assetType,
-  brand,
-  model,
-  code,
-  manufactureYear,
-  kilometersDriven,
-  isPresent,
-  isDone,
-  imageFiles,
-  voiceNoteFiles,
-}) {
-  console.log('Service isDone:', isDone);
-  const user = await userRepository.findById(userId);
-  if (!user) throw new AppError("User not found", 404);
-  if (!user.company?.id) {
-    throw new AppError("User is not linked to a company", 400);
-  }
+    await getAccessibleProject(existingAsset.projectId, user);
 
-  const existingAsset = await assetRepository.findById(assetId);
-  if (!existingAsset) {
-    throw new AppError("Asset not found", 404);
-  }
+    const nextAssetType =
+      assetType === undefined
+        ? normalizeAssetType(existingAsset.assetType)
+        : normalizeAssetType(assetType);
 
-  await getAccessibleProject(existingAsset.projectId, user);
-  const normalizedCode = code?.trim() || null;
-  const normalizedAssetType = assetType === "Vehicle" ? "Vehicle" : "Other";
+    const normalizedCondition = normalizeCondition(condition);
+    const normalizedCode = normalizeOptionalString(code);
 
-  const normalizedCondition =
-    condition && ["New", "Used", "Damaged"].includes(condition)
-      ? condition
-      : undefined;
+    const uploadedImages = await Promise.all(
+      (imageFiles || []).map((file) =>
+        cloudinaryService.uploadImage(file, `${existingAsset.projectId}_${Date.now()}`)
+      )
+    );
 
-  const normalizedBrand =
-    normalizedAssetType === "Vehicle" ? brand?.trim() || null : null;
+    const uploadedVoiceNotes = await Promise.all(
+      (voiceNoteFiles || []).map((file) =>
+        cloudinaryService.uploadVoiceNote(file, `${existingAsset.projectId}_${Date.now()}`)
+      )
+    );
 
-  const normalizedModel =
-    normalizedAssetType === "Vehicle" ? model?.trim() || null : null;
+    const images = [...(existingAsset.images || []), ...uploadedImages];
+    const voiceNotes = [...(existingAsset.voiceNotes || []), ...uploadedVoiceNotes];
 
-  const normalizedManufactureYear =
-    normalizedAssetType === "Vehicle"
-      ? manufactureYear?.trim() || null
-      : null;
+    const updatedAsset = await assetRepository.updateById(assetId, {
+      name:
+        name === undefined
+          ? existingAsset.name
+          : name?.trim() || existingAsset.name,
 
-  const normalizedKilometersDriven =
-    normalizedAssetType === "Vehicle"
-      ? kilometersDriven?.trim() || null
-      : null;
+      writtenDescription:
+        writtenDescription === undefined
+          ? existingAsset.writtenDescription
+          : writtenDescription?.trim() || null,
 
-  const uploadKey = `${existingAsset.projectId}_${Date.now()}`;
+      condition:
+        condition === undefined
+          ? existingAsset.condition
+          : normalizedCondition,
 
-  const uploadedImages = await Promise.all(
-    (imageFiles || []).map((file) =>
-      cloudinaryService.uploadImage(file, uploadKey)
-    )
-  );
+      assetType:
+        assetType === undefined
+          ? existingAsset.assetType
+          : nextAssetType,
 
-  const uploadedVoiceNotes = await Promise.all(
-    (voiceNoteFiles || []).map((file) =>
-      cloudinaryService.uploadVoiceNote(file, uploadKey)
-    )
-  );
+      brand:
+        brand === undefined
+          ? existingAsset.brand
+          : nextAssetType === "vehicle"
+          ? brand?.trim() || null
+          : null,
 
+      model:
+        model === undefined
+          ? existingAsset.model
+          : nextAssetType === "vehicle"
+          ? model?.trim() || null
+          : null,
 
-  const images = [...(existingAsset.images || []), ...uploadedImages];
-  const voiceNotes = [...(existingAsset.voiceNotes || []), ...uploadedVoiceNotes];
+      code:
+        code === undefined
+          ? existingAsset.code
+          : normalizedCode,
 
-  const updatedAsset = await assetRepository.updateById(assetId, {
-    writtenDescription:
-      writtenDescription === undefined
-        ? existingAsset.writtenDescription
-        : writtenDescription?.trim() || null,
-    
-    condition:
-    condition === undefined
-    ? existingAsset.condition
-    : normalizedCondition,
+      manufactureYear:
+        manufactureYear === undefined
+          ? existingAsset.manufactureYear
+          : nextAssetType === "vehicle"
+          ? manufactureYear?.trim() || null
+          : null,
 
-assetType:
-  assetType === undefined
-    ? existingAsset.assetType
-    : normalizedAssetType,
+      kilometersDriven:
+        kilometersDriven === undefined
+          ? existingAsset.kilometersDriven
+          : nextAssetType === "vehicle"
+          ? kilometersDriven?.trim() || null
+          : null,
 
-brand:
-  brand === undefined
-    ? existingAsset.brand
-    : normalizedBrand,
+      isDone:
+        isDone === undefined
+          ? existingAsset.isDone
+          : isDone,
 
-model:
-  model === undefined
-    ? existingAsset.model
-    : normalizedModel,
-  code:
-    code === undefined
-      ? existingAsset.code
-      : normalizedCode,
+      isPresent:
+        isPresent === undefined
+          ? existingAsset.isPresent
+          : isPresent,
 
-manufactureYear:
-  manufactureYear === undefined
-    ? existingAsset.manufactureYear
-    : normalizedManufactureYear,
+      images,
+      voiceNotes,
+    });
 
-    kilometersDriven:
-      kilometersDriven === undefined
-        ? existingAsset.kilometersDriven
-        : normalizedKilometersDriven,
-    isDone:
-      isDone === undefined
-        ? existingAsset.isDone
-        : isDone,
-    isPresent: 
-    isPresent === undefined
-      ? existingAsset.isPresent
-      : isPresent,
-    images,
-    voiceNotes,
-  });
+    return { asset: updatedAsset };
+  },
 
-  return { asset: updatedAsset };
-},
+  async getAssetByCode({ userId, projectId, code }) {
+    if (!code?.trim()) throw new AppError("Code is required", 400);
 
+    const user = await userRepository.findById(userId);
+    if (!user) throw new AppError("User not found", 404);
+    if (!user.company?.id) {
+      throw new AppError("User is not linked to a company", 400);
+    }
 
-async getAssetByCode({ userId, projectId, code }) {
-  if (!code?.trim()) throw new AppError("Code is required", 400);
-  console.log("LOOKUP CODE:", code);
+    await getAccessibleProject(projectId, user);
 
-  const user = await userRepository.findById(userId);
-  if (!user) throw new AppError("User not found", 404);
-  if (!user.company?.id) {
-    throw new AppError("User is not linked to a company", 400);
-  }
+    const asset = await assetRepository.findByProjectIdAndCode(
+      projectId,
+      code.trim()
+    );
 
-  await getAccessibleProject(projectId, user);
+    if (!asset) throw new AppError("Asset not found", 404);
 
-  const asset = await assetRepository.findByProjectIdAndCode(
-    projectId,
-    code.trim()
-  );
-
-  if (!asset) throw new AppError("Asset not found", 404);
-
-  return { asset };
-}
-
+    return { asset };
+  },
 };

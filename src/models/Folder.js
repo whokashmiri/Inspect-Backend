@@ -23,4 +23,4 @@ const folderSchema = new mongoose.Schema(
 );
 
 export const Folder =
-  mongoose.models.Folder || mongoose.model("Folder", folderSchema);
+  mongoose.models.Folder || mongoose.model("mv_subprojects", folderSchema);
