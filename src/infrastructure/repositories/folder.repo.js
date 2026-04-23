@@ -27,7 +27,7 @@ const mapFolder = (doc, { includeCreatedBy = false } = {}) => {
   const folder = {
     id: toId(doc._id),
     name: doc.name,
-    projectId: toId(doc.project),
+    projectId: toId(doc.projectId),
     parentId: toId(doc.parent),
     createdAt: doc.createdAt,
     createdById: toId(doc.createdBy),
@@ -42,7 +42,7 @@ export const folderRepository = {
   async create({ name, projectId, parentId, createdById }) {
     const folder = new Folder({
       name,
-      project: projectId,
+      projectId,
       parent: parentId || null,
       createdBy: createdById,
     });
@@ -57,14 +57,21 @@ export const folderRepository = {
     return mapFolder(folder);
   },
 
-  async findByProjectIdAndParentId(projectId, parentId = null) {
-    const query = Folder.find({
-      project: projectId,
-      parent: parentId,
-    })
-      .sort({ createdAt: -1 })
-      .populate("createdBy", "fullName email");
-    const folders = await query.lean();
-    return folders.map((doc) => mapFolder(doc, { includeCreatedBy: true }));
-  },
+
+
+async findByProjectIdAndParentId(projectId, parentId = null) {
+  const query = Folder.find({
+    projectId: new mongoose.Types.ObjectId(projectId),
+    parent: parentId ? new mongoose.Types.ObjectId(parentId) : null,
+  })
+    .sort({ createdAt: -1 })
+    .populate("createdBy", "fullName email");
+      console.log(projectId, parentId);
+
+
+  const folders = await query.lean();
+  console.log(folders);
+  
+  return folders.map((doc) => mapFolder(doc, { includeCreatedBy: true }));
+}
 };

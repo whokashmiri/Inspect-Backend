@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const folderSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-    project: {
+    projectId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
       required: true,
@@ -23,4 +23,4 @@ const folderSchema = new mongoose.Schema(
 );
 
 export const Folder =
-  mongoose.models.Folder || mongoose.model("mv_subprojects", folderSchema);
+  mongoose.models.Folder || mongoose.model("items", folderSchema);
