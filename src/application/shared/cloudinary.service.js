@@ -44,7 +44,7 @@ export const cloudinaryService = {
       const result = await uploadBuffer({
         buffer: file.buffer,
         folder: "assets/voice-notes",
-        resourceType: "video", // correct for audio in Cloudinary
+        resourceType: "video", 
         publicId: `ABM${assetKey}-${Date.now()}`,
       });
 
