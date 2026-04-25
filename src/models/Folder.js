@@ -1,3 +1,5 @@
+
+// models/Folder.js
 import mongoose from "mongoose";
 
 const folderSchema = new mongoose.Schema(
