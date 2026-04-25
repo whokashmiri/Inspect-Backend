@@ -52,6 +52,11 @@ const assetSchema = new mongoose.Schema(
       trim: true,
     },
 
+      rawData: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+
     code: {
       type: String,
       default: null,

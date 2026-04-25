@@ -66,11 +66,11 @@ async findByProjectIdAndParentId(projectId, parentId = null) {
   })
     .sort({ createdAt: -1 })
     .populate("createdBy", "fullName email");
-      console.log(projectId, parentId);
+      // console.log(projectId, parentId);
 
 
   const folders = await query.lean();
-  console.log(folders);
+  // console.log(folders);
   
   return folders.map((doc) => mapFolder(doc, { includeCreatedBy: true }));
 }
