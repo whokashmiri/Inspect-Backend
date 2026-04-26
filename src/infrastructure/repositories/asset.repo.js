@@ -21,6 +21,34 @@ const mapCreatedBy = (user) => {
   };
 };
 
+
+function getNestedValue(obj, path) {
+  if (!obj || !path) return undefined;
+
+  return path.split(".").reduce((acc, key) => {
+    if (acc === null || acc === undefined) return undefined;
+    return acc[key];
+  }, obj);
+}
+
+function extractRawDataKeys(obj, prefix = "", keys = new Set()) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return keys;
+
+  for (const key of Object.keys(obj)) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+
+    keys.add(fullKey);
+
+    const value = obj[key];
+
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      extractRawDataKeys(value, fullKey, keys);
+    }
+  }
+
+  return keys;
+}
+
 const mapImage = (image) => ({
   id: toId(image._id),
   url: image.url,
@@ -50,6 +78,8 @@ const mapAsset = (doc) => ({
   isDone: doc.isDone ?? false,
   isPresent: doc.isPresent ?? true,
 
+  rawData: doc.rawData ?? {},
+
   // ✅ NEW STRUCTURE
   parent: toId(doc.parent),
   projectId: toId(doc.projectId),
@@ -63,6 +93,36 @@ const mapAsset = (doc) => ({
   voiceNotes: (doc.voiceNotes || []).map(mapVoiceNote),
 });
 
+
+function advancedValueMatches(value, search) {
+  if (value === null || value === undefined) return false;
+
+  if (!search) return true;
+
+  const needle = String(search).toLowerCase();
+
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return String(value).toLowerCase().includes(needle);
+  }
+
+  if (Array.isArray(value)) {
+    return value.some((item) => advancedValueMatches(item, search));
+  }
+
+  if (typeof value === "object") {
+    return Object.values(value).some((item) =>
+      advancedValueMatches(item, search)
+    );
+  }
+
+  return false;
+}
+
+
 export const assetRepository = {
   async create({
     name,
@@ -72,6 +132,7 @@ export const assetRepository = {
     brand,
     model,
     code,
+    rawData,
     manufactureYear,
     kilometersDriven,
     isDone,
@@ -92,6 +153,7 @@ export const assetRepository = {
       code: code ?? null,
       manufactureYear: manufactureYear ?? null,
       kilometersDriven: kilometersDriven ?? null,
+      rawData: rawData ?? {},
 
       projectId,
       parent: parent || null,
@@ -181,4 +243,79 @@ export const assetRepository = {
 
     return assets.map(mapAsset);
   },
+
+
+
+
+async advancedSearchContents({
+  userId,
+  projectId,
+  key,
+  search,
+  filter,
+  page = 1,
+  limit = 15,
+}) {
+  const query = {
+    projectId,
+    rawData: { $exists: true },
+  };
+
+  if (filter === "done") {
+    query.isDone = true;
+  }
+
+  if (filter === "incomplete") {
+    query.isDone = false;
+  }
+
+  const assets = await Asset.find(query)
+    .sort({ createdAt: -1 })
+    .populate("createdBy", "fullName email")
+    .lean();
+
+  const matchedAssets = assets.filter((asset) => {
+    if (key) {
+      const value = getNestedValue(asset.rawData, key);
+      return advancedValueMatches(value, search);
+    }
+
+    return advancedValueMatches(asset.rawData, search);
+  });
+
+  const start = (page - 1) * limit;
+  const paginatedAssets = matchedAssets.slice(start, start + limit);
+
+  return {
+    folders: [],
+    assets: paginatedAssets.map(mapAsset),
+    page,
+    limit,
+    total: matchedAssets.length,
+    hasMore: start + limit < matchedAssets.length,
+  };
+},
+
+
+
+async advancedGetRawDataKeys({ userId, projectId }) {
+  const assets = await Asset.find({
+    projectId,
+    rawData: { $exists: true },
+  })
+    .select("rawData")
+    .lean();
+
+  const keys = new Set();
+
+  for (const asset of assets) {
+    extractRawDataKeys(asset.rawData, "", keys);
+  }
+
+  return {
+    keys: Array.from(keys).sort(),
+  };
+},
+  
+
 };

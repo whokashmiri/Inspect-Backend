@@ -142,4 +142,28 @@ export const folderAssetController = {
 
     return res.status(200).json(result);
   },
+
+ async advancedSearchContents(req, res) {
+  const result = await folderAssetService.advancedSearchContents({
+    userId: req.userId,
+    projectId: req.params.projectId,
+    key: req.query.key?.trim() || null,
+    search: req.query.search?.trim() || "",
+    filter: req.query.filter || "all",
+    page: Number(req.query.page || 1),
+    limit: Number(req.query.limit || 15),
+  });
+
+  return res.status(200).json(result);
+},
+
+
+async advancedGetRawDataKeys(req, res) {
+  const result = await folderAssetService.advancedGetRawDataKeys({
+    userId: req.userId,
+    projectId: req.params.projectId,
+  });
+
+  return res.status(200).json(result);
+},
 };

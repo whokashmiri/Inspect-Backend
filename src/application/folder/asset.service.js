@@ -343,4 +343,33 @@ export const folderAssetService = {
 
     return { asset };
   },
+
+
+async advancedGetRawDataKeys({ userId, projectId }) {
+  return assetRepository.advancedGetRawDataKeys({
+    userId,
+    projectId,
+  });
+},
+
+
+async advancedSearchContents({
+  userId,
+  projectId,
+  key,
+  search,
+  filter,
+  page,
+  limit,
+}) {
+  return assetRepository.advancedSearchContents({
+    userId,
+    projectId,
+    key,
+    search,
+    filter,
+    page,
+    limit,
+  });
+},
 };

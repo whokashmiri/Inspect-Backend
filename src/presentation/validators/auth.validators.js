@@ -29,6 +29,20 @@ const booleanPreprocess = (value) => {
   return value;
 };
 
+const jsonPreprocess = (value) => {
+  if (value === "" || value === null || value === undefined) return undefined;
+
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+
+  return value;
+};
+
 const assetTypePreprocess = (value) => {
   if (value === "" || value === null || value === undefined) return undefined;
 
@@ -44,11 +58,12 @@ export const createFolderSchema = z.object({
 export const createAssetSchema = z.object({
   name: z.string().min(1, "Asset name is required"),
 
-  // new field
+  
   parent: optionalOfflineId,
 
-  // temporary backward compatibility
-  parent: optionalOfflineId.optional(),
+  rawData: z.preprocess(jsonPreprocess, z.any().optional()),
+
+  
 
   writtenDescription: z.preprocess(
     emptyToUndefined,
@@ -92,6 +107,8 @@ export const createAssetSchema = z.object({
 
 export const updateAssetSchema = z.object({
   name: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
+
+  rawData: z.preprocess(jsonPreprocess, z.any().optional()),
 
   writtenDescription: z.preprocess(
     emptyToUndefined,

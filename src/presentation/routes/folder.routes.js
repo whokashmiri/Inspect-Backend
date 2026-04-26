@@ -14,6 +14,22 @@ import {
 const router = Router();
 
 router.get(
+  "/:projectId/contents/advanced-keys",
+  authenticate,
+  asyncWrap(folderAssetController.advancedGetRawDataKeys)
+);
+
+
+router.get(
+  "/:projectId/contents/advanced-search",
+  authenticate,
+  asyncWrap(folderAssetController.advancedSearchContents)
+);
+
+
+
+
+router.get(
   "/:projectId/contents",
   authenticate,
   asyncWrap(folderAssetController.listContents)

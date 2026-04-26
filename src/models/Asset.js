@@ -145,4 +145,4 @@ assetSchema.index(
 );
 
 export const Asset =
-  mongoose.models.Asset || mongoose.model("pic_assets", assetSchema);
+  mongoose.models.Asset || mongoose.model("assets", assetSchema);
