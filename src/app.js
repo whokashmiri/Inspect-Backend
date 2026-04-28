@@ -8,6 +8,11 @@ const app = express();
 
 app.use(express.json());
 
+app.get("/", (_req, res) => {
+  res.json({ status: "ok", service: "inspect-backend" });
+});
+
+
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/projects", projectRoutes);
 app.use("/api/v1/projects", folderAssetRoutes);
