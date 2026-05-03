@@ -75,6 +75,8 @@ const assetSchema = new mongoose.Schema(
       trim: true,
     },
 
+    
+
     kilometersDriven: {
       type: String,
       default: null,
@@ -129,6 +131,25 @@ const assetSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+
+    hasNotes: {
+  type: Boolean,
+  default: false,
+},
+
+notes: {
+  type: String,
+  default: null,
+  trim: true,
+  validate: {
+    validator: function (value) {
+      if (!this.hasNotes) return true;
+      return typeof value === "string";
+    },
+    message: "Notes must be provided when hasNotes is true",
+  },
+},
   },
   { timestamps: true }
 );

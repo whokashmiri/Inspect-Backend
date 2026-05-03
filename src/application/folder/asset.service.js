@@ -81,7 +81,7 @@ export const folderAssetService = {
     userId,
     projectId,
     parent,
-    folderId, // temporary compatibility if frontend still sends folderId
+    folderId, 
     name,
     writtenDescription,
     condition,
@@ -93,6 +93,8 @@ export const folderAssetService = {
     manufactureYear,
     kilometersDriven,
     isDone,
+    hasNotes,
+    notes,
     imageFiles,
     voiceNoteFiles,
   }) {
@@ -161,6 +163,8 @@ export const folderAssetService = {
       voiceNotes: uploadedVoiceNotes,
       projectId,
       parent: resolvedParentSubProjectId,
+      hasNotes: hasNotes !== undefined ? hasNotes : false,
+      notes: hasNotes ? normalizeOptionalString(notes) : null,
       isAssetFolder: true,
       createdBy: user.id,
     });
@@ -213,6 +217,8 @@ export const folderAssetService = {
     kilometersDriven,
     isPresent,
     isDone,
+    hasNotes,
+    notes,
     imageFiles,
     voiceNoteFiles,
   }) {
@@ -305,6 +311,18 @@ export const folderAssetService = {
           : nextAssetType === "vehicle"
           ? kilometersDriven?.trim() || null
           : null,
+
+          hasNotes:
+  hasNotes === undefined
+    ? existingAsset.hasNotes
+    : hasNotes,
+
+notes:
+  hasNotes === false
+    ? null
+    : notes === undefined
+    ? existingAsset.notes
+    : normalizeOptionalString(notes),
 
       isDone:
         isDone === undefined

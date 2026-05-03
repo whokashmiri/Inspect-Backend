@@ -76,6 +76,10 @@ const mapAsset = (doc) => ({
   manufactureYear: doc.manufactureYear ?? null,
   kilometersDriven: doc.kilometersDriven ?? null,
   isDone: doc.isDone ?? false,
+
+  hasNotes: doc.hasNotes ?? false,
+  notes: doc.notes ?? null,
+
   isPresent: doc.isPresent ?? true,
 
   rawData: doc.rawData ?? {},
@@ -133,6 +137,8 @@ export const assetRepository = {
     model,
     code,
     rawData,
+    hasNotes,
+    notes,
     manufactureYear,
     kilometersDriven,
     isDone,
@@ -169,6 +175,9 @@ export const assetRepository = {
         publicId: item.publicId || null,
         duration: item.duration ?? null,
       })),
+
+      hasNotes: hasNotes ?? false,
+      notes: hasNotes ? notes ?? null : null,
 
       isDone: isDone ?? false,
       isPresent: isPresent ?? true,

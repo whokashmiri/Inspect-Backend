@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Project } from "../../models/Project.js";
+import { Asset } from "../../models/Asset.js"; // adjust path/name if your model file differs
 
 const toId = (value) => {
   if (!value) return null;
@@ -11,6 +12,12 @@ const toId = (value) => {
     return value.toString();
   }
   return null;
+};
+
+const emptyStats = {
+  totalAssets: 0,
+  doneAssets: 0,
+  incompleteAssets: 0,
 };
 
 const mapCompany = (company) => {
@@ -30,7 +37,7 @@ const mapUser = (user) => {
   };
 };
 
-const mapProject = (doc) => {
+const mapProject = (doc, stats = emptyStats) => {
   if (!doc) return null;
 
   return {
@@ -43,13 +50,55 @@ const mapProject = (doc) => {
     userId: toId(doc.userId),
     company: mapCompany(doc.companyId),
     user: mapUser(doc.userId),
+    stats,
   };
 };
 
 const populateProjectQuery = (query) =>
-  query
-    .populate("companyId", "name")
-    .populate("userId", "username role");
+  query.populate("companyId", "name").populate("userId", "username role");
+
+async function getStatsMap(projectIds) {
+  if (!projectIds.length) return {};
+
+  const objectIds = projectIds
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+  const result = await Asset.aggregate([
+    {
+      $match: {
+        projectId: { $in: objectIds },
+        isAssetFolder: true,
+      },
+    },
+    {
+      $group: {
+        _id: "$projectId",
+        totalAssets: { $sum: 1 },
+        doneAssets: {
+          $sum: {
+            $cond: [{ $eq: ["$isDone", true] }, 1, 0],
+          },
+        },
+        incompleteAssets: {
+          $sum: {
+            $cond: [{ $eq: ["$isDone", true] }, 0, 1],
+          },
+        },
+      },
+    },
+  ]);
+
+  return result.reduce((acc, item) => {
+    acc[item._id.toString()] = {
+      totalAssets: item.totalAssets,
+      doneAssets: item.doneAssets,
+      incompleteAssets: item.incompleteAssets,
+    };
+
+    return acc;
+  }, {});
+}
 
 export const projectRepository = {
   async create({ name, companyId, userId, workflowStatus = "new" }) {
@@ -64,28 +113,50 @@ export const projectRepository = {
     await project.populate("companyId", "name");
     await project.populate("userId", "username role");
 
-    return mapProject(project.toObject());
+    return mapProject(project.toObject(), emptyStats);
   },
 
   async findByCompanyId(companyId) {
     const query = Project.find({ companyId }).sort({ createdAt: -1 });
     const projects = await populateProjectQuery(query).lean();
-    return projects.map(mapProject);
+
+    const ids = projects.map((project) => project._id.toString());
+    const statsMap = await getStatsMap(ids);
+
+    return projects.map((project) =>
+      mapProject(project, statsMap[project._id.toString()] ?? emptyStats)
+    );
   },
 
   async findByCompanyIdAndUserId(companyId, userId) {
-    const query = Project.find({
-      companyId,
-      userId,
-    }).sort({ createdAt: -1 });
-
+    const query = Project.find({ companyId, userId }).sort({ createdAt: -1 });
     const projects = await populateProjectQuery(query).lean();
-    return projects.map(mapProject);
+
+    const ids = projects.map((project) => project._id.toString());
+    const statsMap = await getStatsMap(ids);
+
+    return projects.map((project) =>
+      mapProject(project, statsMap[project._id.toString()] ?? emptyStats)
+    );
   },
 
   async findById(id) {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
+
     const project = await populateProjectQuery(Project.findById(id)).lean();
-    return mapProject(project);
+    if (!project) return null;
+
+    const statsMap = await getStatsMap([project._id.toString()]);
+
+    return mapProject(project, statsMap[project._id.toString()] ?? emptyStats);
+  },
+
+  async getStatsByProjectId(projectId) {
+    if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) {
+      return emptyStats;
+    }
+
+    const statsMap = await getStatsMap([projectId]);
+    return statsMap[projectId] ?? emptyStats;
   },
 };

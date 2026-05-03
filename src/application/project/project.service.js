@@ -1,3 +1,5 @@
+
+//application/project/project.service.js
 import { projectRepository } from "../../infrastructure/repositories/project.repo.js";
 import { userRepository } from "../../infrastructure/repositories/user.repo.js";
 import { AppError } from "../../utils/AppError.js";
@@ -22,6 +24,7 @@ export const projectService = {
     return { project };
   },
 
+
 async list(userId) {
   const user = await userRepository.findById(userId);
   if (!user) throw new AppError("User not found", 404);
@@ -30,11 +33,11 @@ async list(userId) {
     throw new AppError("User is not linked to a company", 400);
   }
 
-  // ✅ Extract id safely
   const companyId = user.company.id || user.company._id;
 
   const projects = await projectRepository.findByCompanyId(companyId);
 
   return { projects };
 }
+
 };

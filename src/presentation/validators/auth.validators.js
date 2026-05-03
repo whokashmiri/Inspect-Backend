@@ -89,6 +89,16 @@ export const createAssetSchema = z.object({
     z.boolean().optional().nullable()
   ),
 
+  hasNotes: z.preprocess(
+  booleanPreprocess,
+  z.boolean().optional().nullable()
+),
+
+notes: z.preprocess(
+  emptyToUndefined,
+  z.string().optional().nullable()
+),
+
   isPresent: z.preprocess(
     booleanPreprocess,
     z.boolean().optional().nullable()
@@ -133,6 +143,16 @@ export const updateAssetSchema = z.object({
     booleanPreprocess,
     z.boolean().optional().nullable()
   ),
+
+hasNotes: z.preprocess(
+  booleanPreprocess,
+  z.boolean().optional().nullable()
+),
+
+notes: z.preprocess(
+  emptyToUndefined,
+  z.string().optional().nullable()
+),
 
   isPresent: z.preprocess(
     booleanPreprocess,

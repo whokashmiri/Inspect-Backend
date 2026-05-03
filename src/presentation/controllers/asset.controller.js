@@ -64,6 +64,9 @@ export const folderAssetController = {
       isDone: parseBoolean(req.body.isDone, false),
       isPresent: parseBoolean(req.body.isPresent, true),
 
+      hasNotes: parseBoolean(req.body.hasNotes, false),
+      notes: req.body.notes || null,
+
       imageFiles: req.files?.images || [],
       voiceNoteFiles: req.files?.voiceNotes || [],
     });
@@ -112,6 +115,9 @@ export const folderAssetController = {
 
       isDone: parseBoolean(req.body.isDone, undefined),
       isPresent: parseBoolean(req.body.isPresent, undefined),
+
+      hasNotes: parseBoolean(req.body.hasNotes, undefined),
+      notes: req.body.notes === undefined ? undefined : req.body.notes,
 
       imageFiles: req.files?.images || [],
       voiceNoteFiles: req.files?.voiceNotes || [],

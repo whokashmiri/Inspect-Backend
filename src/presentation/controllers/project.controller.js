@@ -1,3 +1,5 @@
+
+//src/presentation/controllers/project.controller.js
 import { projectService } from "../../application/project/project.service.js";
 
 export const projectController = {
@@ -16,6 +18,8 @@ export const projectController = {
     console.log("project/get");
 
     const result = await projectService.list(req.userId);
+    console.log("RESULT" , result);
+    
     return res.status(200).json(result);
   },
 };
