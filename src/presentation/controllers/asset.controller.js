@@ -34,8 +34,7 @@ export const folderAssetController = {
   },
 
   async createAsset(req, res) {
-    console.log("BODY:", req.body);
-    console.log("FILES:", req.files);
+   
 
     const result = await folderAssetService.createAsset({
       userId: req.userId,
@@ -67,16 +66,15 @@ export const folderAssetController = {
       hasNotes: parseBoolean(req.body.hasNotes, false),
       notes: req.body.notes || null,
 
-      imageFiles: req.files?.images || [],
-      voiceNoteFiles: req.files?.voiceNotes || [],
+     images: Array.isArray(req.body.images) ? req.body.images : [],
+    voiceNotes: Array.isArray(req.body.voiceNotes) ? req.body.voiceNotes : [],
     });
 
     return res.status(201).json(result);
   },
 
   async updateAsset(req, res) {
-    console.log("BODY:", req.body);
-    console.log("FILES:", req.files);
+
 
     const result = await folderAssetService.updateAsset({
       userId: req.userId,
@@ -119,8 +117,8 @@ export const folderAssetController = {
       hasNotes: parseBoolean(req.body.hasNotes, undefined),
       notes: req.body.notes === undefined ? undefined : req.body.notes,
 
-      imageFiles: req.files?.images || [],
-      voiceNoteFiles: req.files?.voiceNotes || [],
+      images: Array.isArray(req.body.images) ? req.body.images : [],
+      voiceNotes: Array.isArray(req.body.voiceNotes) ? req.body.voiceNotes : [],
     });
 
     return res.status(200).json(result);
@@ -137,8 +135,7 @@ export const folderAssetController = {
   },
 
   async getAssetByCode(req, res) {
-    console.log("REQ QUERY CODE:", req.query.code);
-    console.log("REQ PARAM PROJECT:", req.params.projectId);
+    
 
     const result = await folderAssetService.getAssetByCode({
       userId: req.userId,

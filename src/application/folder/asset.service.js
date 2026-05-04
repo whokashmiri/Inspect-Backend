@@ -4,7 +4,7 @@ import { userRepository } from "../../infrastructure/repositories/user.repo.js";
 import { projectRepository } from "../../infrastructure/repositories/project.repo.js";
 import { folderRepository } from "../../infrastructure/repositories/folder.repo.js";
 import { assetRepository } from "../../infrastructure/repositories/asset.repo.js";
-import { cloudinaryService } from "../shared/cloudinary.service.js";
+// import { cloudinaryService } from "../shared/cloudinary.service.js";
 
 async function getAccessibleProject(projectId, user) {
   const project = await projectRepository.findById(projectId);
@@ -46,6 +46,32 @@ function normalizeOptionalString(value) {
 function normalizeVehicleOnlyField(assetType, value) {
   if (value === undefined) return undefined;
   return assetType === "vehicle" ? value?.trim() || null : null;
+}
+
+function sanitizeImages(images = []) {
+  if (!Array.isArray(images)) return [];
+
+  return images
+    .filter((item) => item?.url && item?.publicId)
+    .map((item) => ({
+      url: item.url,
+      publicId: item.publicId,
+    }));
+}
+
+function sanitizeVoiceNotes(voiceNotes = []) {
+  if (!Array.isArray(voiceNotes)) return [];
+
+  return voiceNotes
+    .filter((item) => item?.url && item?.publicId)
+    .map((item) => ({
+      url: item.url,
+      publicId: item.publicId,
+      duration:
+        typeof item.duration === "number"
+          ? Math.round(item.duration)
+          : null,
+    }));
 }
 
 export const folderAssetService = {
@@ -95,8 +121,8 @@ export const folderAssetService = {
     isDone,
     hasNotes,
     notes,
-    imageFiles,
-    voiceNoteFiles,
+    images,
+    voiceNotes,
   }) {
     if (!name?.trim()) throw new AppError("Asset name is required", 400);
 
@@ -133,19 +159,8 @@ export const folderAssetService = {
       kilometersDriven
     );
 
-    const uploadKey = `${projectId}_${Date.now()}`;
+  
 
-    const uploadedImages = await Promise.all(
-      (imageFiles || []).map((file) =>
-        cloudinaryService.uploadImage(file, uploadKey)
-      )
-    );
-
-    const uploadedVoiceNotes = await Promise.all(
-      (voiceNoteFiles || []).map((file) =>
-        cloudinaryService.uploadVoiceNote(file, uploadKey)
-      )
-    );
 
     const asset = await assetRepository.create({
       name: name.trim(),
@@ -159,8 +174,8 @@ export const folderAssetService = {
       kilometersDriven: normalizedKilometersDriven,
       isDone: isDone !== undefined ? isDone : false,
       isPresent: isPresent !== undefined ? isPresent : true,
-      images: uploadedImages,
-      voiceNotes: uploadedVoiceNotes,
+      images: sanitizeImages(images),
+      voiceNotes: sanitizeVoiceNotes(voiceNotes),
       projectId,
       parent: resolvedParentSubProjectId,
       hasNotes: hasNotes !== undefined ? hasNotes : false,
@@ -219,8 +234,8 @@ export const folderAssetService = {
     isDone,
     hasNotes,
     notes,
-    imageFiles,
-    voiceNoteFiles,
+    images,
+    voiceNotes,
   }) {
     const user = await userRepository.findById(userId);
     if (!user) throw new AppError("User not found", 404);
@@ -243,20 +258,16 @@ export const folderAssetService = {
     const normalizedCondition = normalizeCondition(condition);
     const normalizedCode = normalizeOptionalString(code);
 
-    const uploadedImages = await Promise.all(
-      (imageFiles || []).map((file) =>
-        cloudinaryService.uploadImage(file, `${existingAsset.projectId}_${Date.now()}`)
-      )
-    );
+  
+    const nextImages = [
+  ...(existingAsset.images || []),
+  ...sanitizeImages(images),
+];
 
-    const uploadedVoiceNotes = await Promise.all(
-      (voiceNoteFiles || []).map((file) =>
-        cloudinaryService.uploadVoiceNote(file, `${existingAsset.projectId}_${Date.now()}`)
-      )
-    );
-
-    const images = [...(existingAsset.images || []), ...uploadedImages];
-    const voiceNotes = [...(existingAsset.voiceNotes || []), ...uploadedVoiceNotes];
+const nextVoiceNotes = [
+  ...(existingAsset.voiceNotes || []),
+  ...sanitizeVoiceNotes(voiceNotes),
+];
 
     const updatedAsset = await assetRepository.updateById(assetId, {
       name:
@@ -334,8 +345,8 @@ notes:
           ? existingAsset.isPresent
           : isPresent,
 
-      images,
-      voiceNotes,
+      images: nextImages,
+voiceNotes: nextVoiceNotes,
     });
 
     return { asset: updatedAsset };

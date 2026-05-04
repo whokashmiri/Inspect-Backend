@@ -15,10 +15,10 @@ export const projectController = {
   },
 
   async list(req, res) {
-    console.log("project/get");
+    
 
     const result = await projectService.list(req.userId);
-    console.log("RESULT" , result);
+   
     
     return res.status(200).json(result);
   },

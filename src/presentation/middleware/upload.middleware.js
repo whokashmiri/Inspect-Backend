@@ -1,34 +1,80 @@
+// // middleware/upload.middleware.js
+// import multer from "multer";
+// import path from "path";
+// import fs from "fs";
+// import { AppError } from "../../utils/AppError.js";
 
+// const ensureDir = (dir) => {
+//   if (!fs.existsSync(dir)) {
+//     fs.mkdirSync(dir, { recursive: true });
+//   }
+// };
 
-// middleware/upload.middleware.js
-import multer from "multer";
-import { AppError } from "../../utils/AppError.js";
+// const IMAGE_DIR = "uploads/images";
+// const AUDIO_DIR = "uploads/audio";
 
-const storage = multer.memoryStorage();
+// ensureDir(IMAGE_DIR);
+// ensureDir(AUDIO_DIR);
 
-function fileFilter(_req, file, cb) {
-  const isImage = file.fieldname === "images";
-  const isVoice = file.fieldname === "voiceNotes";
+// // 📦 Disk storage (production safe)
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     if (file.fieldname === "images") {
+//       return cb(null, IMAGE_DIR);
+//     }
+//     if (file.fieldname === "voiceNotes") {
+//       return cb(null, AUDIO_DIR);
+//     }
+//     return cb(new AppError("Invalid field", 400));
+//   },
 
-  if (isImage && file.mimetype.startsWith("image/")) {
-    return cb(null, true);
-  }
+//   filename: (req, file, cb) => {
+//     const ext = path.extname(file.originalname);
+//     const uniqueName = `${file.fieldname}-${Date.now()}-${Math.round(
+//       Math.random() * 1e9
+//     )}${ext}`;
+//     cb(null, uniqueName);
+//   },
+// });
 
-  if (isVoice && file.mimetype.startsWith("audio/")) {
-    return cb(null, true);
-  }
+// // 🛡️ File filter (more tolerant + safe)
+// function fileFilter(_req, file, cb) {
+//   const isImageField = file.fieldname === "images";
+//   const isVoiceField = file.fieldname === "voiceNotes";
 
-  return cb(new AppError(`Invalid file type for field ${file.fieldname}`, 400));
-}
+//   const mime = file.mimetype || "";
 
-export const uploadAssetMedia = multer({
-  storage,
-  fileFilter,
-  limits: {
-    files: 20,
-    fileSize: 25 * 1024 * 1024,
-  },
-}).fields([
-  { name: "images", maxCount: 50 },
-  { name: "voiceNotes", maxCount: 5 },
-]);
+//   // Allow images
+//   if (isImageField && mime.startsWith("image/")) {
+//     return cb(null, true);
+//   }
+
+//   // Allow audio (handle mobile edge cases)
+//   if (
+//     isVoiceField &&
+//     (mime.startsWith("audio/") ||
+//       mime === "application/octet-stream")
+//   ) {
+//     return cb(null, true);
+//   }
+
+//   return cb(
+//     new AppError(
+//       `Invalid file type (${mime}) for field ${file.fieldname}`,
+//       400
+//     )
+//   );
+// }
+
+// // 🚀 Multer instance
+// export const uploadAssetMedia = multer({
+//   storage,
+//   fileFilter,
+//   limits: {
+//     fileSize: 15 * 1024 * 1024, // 15MB per file (safer)
+//     files: 60, // total files allowed
+//   },
+// }).fields([
+//   { name: "images", maxCount: 40 },
+//   { name: "voiceNotes", maxCount: 10 },
+// ]);

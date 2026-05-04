@@ -3,7 +3,7 @@ import { Router } from "express";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { asyncWrap } from "../middleware/asyncWrap.js";
 import { validate } from "../middleware/validate.middleware.js";
-import { uploadAssetMedia } from "../middleware/upload.middleware.js";
+// import { uploadAssetMedia } from "../middleware/upload.middleware.js";
 import { folderAssetController } from "../controllers/asset.controller.js";
 import {
   createFolderSchema,
@@ -45,7 +45,6 @@ router.post(
 router.post(
   "/:projectId/assets",
   authenticate,
-  uploadAssetMedia,
   validate(createAssetSchema),
   asyncWrap(folderAssetController.createAsset)
 );
@@ -53,7 +52,6 @@ router.post(
 router.patch(
   "/assets/:assetId",
   authenticate,
-  uploadAssetMedia,
   validate(updateAssetSchema),
   asyncWrap(folderAssetController.updateAsset)
 );

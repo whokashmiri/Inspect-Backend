@@ -5,8 +5,7 @@ export function validate(schema) {
     const result = schema.safeParse(req.body);
 
     if (!result.success) {
-      console.log("VALIDATION BODY:", req.body);
-      console.log("VALIDATION ERRORS:", JSON.stringify(result.error.flatten(), null, 2));
+     
 
       const errors = result.error?.errors ?? [];
       const message =
