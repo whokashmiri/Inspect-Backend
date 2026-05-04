@@ -1,11 +1,7 @@
-
-//src/presentation/controllers/project.controller.js
 import { projectService } from "../../application/project/project.service.js";
 
 export const projectController = {
   async create(req, res) {
-    console.log("project/post");
-
     const result = await projectService.create({
       userId: req.userId,
       name: req.body.name,
@@ -15,11 +11,36 @@ export const projectController = {
   },
 
   async list(req, res) {
-    
-
     const result = await projectService.list(req.userId);
-   
-    
+    return res.status(200).json(result);
+  },
+
+  async listInspectorFiles(req, res) {
+    const result = await projectService.listInspectorFiles({
+      userId: req.userId,
+      projectId: req.params.projectId,
+    });
+
+    return res.status(200).json(result);
+  },
+
+  async getInspectorFile(req, res) {
+    const result = await projectService.getInspectorFile({
+      userId: req.userId,
+      projectId: req.params.projectId,
+      fileId: req.params.fileId,
+    });
+
+    return res.status(200).json(result);
+  },
+
+  async downloadInspectorFile(req, res) {
+    const result = await projectService.getInspectorFileDownloadUrl({
+      userId: req.userId,
+      projectId: req.params.projectId,
+      fileId: req.params.fileId,
+    });
+
     return res.status(200).json(result);
   },
 };

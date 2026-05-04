@@ -20,6 +20,12 @@ const assetVoiceNoteSchema = new mongoose.Schema(
 
 const assetSchema = new mongoose.Schema(
   {
+       assetId: {
+      type: String,
+      default: function () {
+        return this._id?.toString();
+      },
+    },
     name: {
       type: String,
       required: true,
