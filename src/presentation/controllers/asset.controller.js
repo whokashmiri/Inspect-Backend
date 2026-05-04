@@ -146,11 +146,34 @@ export const folderAssetController = {
     return res.status(200).json(result);
   },
 
- async advancedSearchContents(req, res) {
+  async advancedGetRawDataKeyValues(req, res) {
+  const result = await folderAssetService.advancedGetRawDataKeyValues({
+    userId: req.userId,
+    projectId: req.params.projectId,
+    key: req.query.key?.trim(),
+  });
+
+  return res.status(200).json(result);
+},
+
+async advancedSearchContents(req, res) {
+  let filters = [];
+
+  if (req.query.filters) {
+    try {
+      filters = JSON.parse(req.query.filters);
+    } catch {
+      filters = [];
+    }
+  }
+
+
+  
+
   const result = await folderAssetService.advancedSearchContents({
     userId: req.userId,
     projectId: req.params.projectId,
-    key: req.query.key?.trim() || null,
+    filters,
     search: req.query.search?.trim() || "",
     filter: req.query.filter || "all",
     page: Number(req.query.page || 1),

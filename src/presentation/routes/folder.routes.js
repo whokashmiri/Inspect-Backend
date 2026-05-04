@@ -21,6 +21,12 @@ router.get(
 
 
 router.get(
+  "/:projectId/contents/advanced-key-values",
+  authenticate,
+  asyncWrap(folderAssetController.advancedGetRawDataKeyValues)
+);
+
+router.get(
   "/:projectId/contents/advanced-search",
   authenticate,
   asyncWrap(folderAssetController.advancedSearchContents)

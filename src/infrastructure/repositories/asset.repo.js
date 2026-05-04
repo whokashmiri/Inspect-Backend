@@ -257,11 +257,39 @@ export const assetRepository = {
 
 
 
+async advancedGetRawDataKeyValues({ userId, projectId, key }) {
+  const assets = await Asset.find({
+    projectId,
+   
+  })
+    .select("rawData")
+    .lean();
+
+  const values = new Set();
+
+  for (const asset of assets) {
+    const value = getNestedValue(asset.rawData, key);
+
+    if (value === null || value === undefined) continue;
+
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      values.add(String(value).trim());
+    }
+  }
+
+  return {
+    values: Array.from(values).sort(),
+  };
+},
 
 async advancedSearchContents({
   userId,
   projectId,
-  key,
+  filters = [],
   search,
   filter,
   page = 1,
@@ -269,7 +297,6 @@ async advancedSearchContents({
 }) {
   const query = {
     projectId,
-    rawData: { $exists: true },
   };
 
   if (filter === "done") {
@@ -285,14 +312,30 @@ async advancedSearchContents({
     .populate("createdBy", "fullName email")
     .lean();
 
-  const matchedAssets = assets.filter((asset) => {
-    if (key) {
-      const value = getNestedValue(asset.rawData, key);
-      return advancedValueMatches(value, search);
-    }
+ const matchedAssets = assets.filter((asset) => {
+  const hasFilters = Array.isArray(filters) && filters.length > 0;
+  const cleanSearch = search?.trim();
 
-    return advancedValueMatches(asset.rawData, search);
-  });
+  const matchesSelectedFilters =
+    !hasFilters ||
+    filters.every(({ key, value }) => {
+      const rawValue = getNestedValue(asset.rawData, key);
+
+      if (rawValue === null || rawValue === undefined) return false;
+
+      return (
+        String(rawValue).trim().toLowerCase() ===
+        String(value).trim().toLowerCase()
+      );
+    });
+
+  const matchesSearch =
+    !cleanSearch ||
+    advancedValueMatches(asset.name, cleanSearch) ||
+    advancedValueMatches(asset.rawData, cleanSearch);
+
+  return matchesSelectedFilters && matchesSearch;
+});
 
   const start = (page - 1) * limit;
   const paginatedAssets = matchedAssets.slice(start, start + limit);
@@ -306,8 +349,6 @@ async advancedSearchContents({
     hasMore: start + limit < matchedAssets.length,
   };
 },
-
-
 
 async advancedGetRawDataKeys({ userId, projectId }) {
   const assets = await Asset.find({

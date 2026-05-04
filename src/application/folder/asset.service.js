@@ -385,7 +385,7 @@ async advancedGetRawDataKeys({ userId, projectId }) {
 async advancedSearchContents({
   userId,
   projectId,
-  key,
+  filters,
   search,
   filter,
   page,
@@ -394,11 +394,19 @@ async advancedSearchContents({
   return assetRepository.advancedSearchContents({
     userId,
     projectId,
-    key,
+    filters,
     search,
     filter,
     page,
     limit,
   });
 },
+
+async advancedGetRawDataKeyValues({ userId, projectId, key }) {
+  return assetRepository.advancedGetRawDataKeyValues({
+    userId,
+    projectId,
+    key,
+  });
+}
 };
