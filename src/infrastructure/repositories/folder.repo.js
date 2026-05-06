@@ -47,7 +47,7 @@ export const folderRepository = {
       createdBy: createdById,
     });
     await folder.save();
-    await folder.populate("createdBy", "fullName email");
+    await folder.populate("createdBy", "fullName email role");
     return mapFolder(folder.toObject(), { includeCreatedBy: true });
   },
 
@@ -65,7 +65,7 @@ async findByProjectIdAndParentId(projectId, parentId = null) {
     parent: parentId ? new mongoose.Types.ObjectId(parentId) : null,
   })
     .sort({ createdAt: -1 })
-    .populate("createdBy", "fullName email");
+    .populate("createdBy", "fullName email , role" );
 
 
 

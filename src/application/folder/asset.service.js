@@ -249,9 +249,11 @@ export const folderAssetService = {
     }
 
     await getAccessibleProject(existingAsset.projectId, user);
-    if (existingAsset.createdBy?.toString() !== user.id.toString()) {
-  throw new AppError("Only the asset creator can edit this asset", 403);
-}
+
+const currentUserId = user.id.toString();
+const assetCreatorId = existingAsset.createdBy?.id?.toString();
+const isCreator = assetCreatorId === currentUserId;
+
 
     const nextAssetType =
       assetType === undefined
@@ -273,10 +275,12 @@ const nextVoiceNotes = [
 ];
 
     const updatedAsset = await assetRepository.updateById(assetId, {
-      name:
-        name === undefined
-          ? existingAsset.name
-          : name?.trim() || existingAsset.name,
+     name:
+  !isCreator
+    ? existingAsset.name
+    : name === undefined
+    ? existingAsset.name
+    : name?.trim() || existingAsset.name,
 
       writtenDescription:
         writtenDescription === undefined
@@ -391,9 +395,9 @@ voiceNotes: nextVoiceNotes,
 
   await getAccessibleProject(existingAsset.projectId, user);
 
-  if (existingAsset.createdBy?.id?.toString() !== user.id.toString()) {
-    throw new AppError("Only the asset creator can delete this asset", 403);
-  }
+const currentUserId = user.id.toString();
+const assetCreatorId = existingAsset.createdBy?.id?.toString();
+const isCreator = assetCreatorId === currentUserId;
 
   await assetRepository.deleteById(assetId);
 

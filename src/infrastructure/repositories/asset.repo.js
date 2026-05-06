@@ -20,6 +20,7 @@ const mapCreatedBy = (user) => {
     id: toId(user._id ?? user),
     fullName: user.fullName ?? null,
     email: user.email ?? null,
+    role: user.role ?? null,
   };
 };
 
@@ -187,14 +188,14 @@ export const assetRepository = {
     });
 
     await asset.save();
-    await asset.populate("createdBy", "fullName email");
+    await asset.populate("createdBy", "fullName email ,role");
 
     return mapAsset(asset.toObject());
   },
 
   async findById(assetId) {
     const asset = await Asset.findById(assetId)
-      .populate("createdBy", "fullName email")
+      .populate("createdBy", "fullName email  role")
       .lean();
 
     return asset ? mapAsset(asset) : null;
@@ -211,7 +212,7 @@ export const assetRepository = {
     });
 
     await asset.save();
-    await asset.populate("createdBy", "fullName email");
+    await asset.populate("createdBy", "fullName email  role");
 
     return mapAsset(asset.toObject());
   },
@@ -221,7 +222,7 @@ export const assetRepository = {
       projectId,
       code,
     })
-      .populate("createdBy", "fullName email")
+      .populate("createdBy", "fullName email  role")
       .lean();
 
     return asset ? mapAsset(asset) : null;
@@ -237,7 +238,7 @@ export const assetRepository = {
       parent,
     })
       .sort({ createdAt: -1 })
-      .populate("createdBy", "fullName email")
+      .populate("createdBy", "fullName email  role")
       .lean();
 
     return assets.map(mapAsset);
@@ -249,7 +250,7 @@ export const assetRepository = {
       name: { $regex: search, $options: "i" },
     })
       .sort({ createdAt: -1 })
-      .populate("createdBy", "fullName email")
+      .populate("createdBy", "fullName email  role")
       .lean();
 
     return assets.map(mapAsset);
@@ -309,7 +310,7 @@ async advancedSearchContents({
 
   const assets = await Asset.find(query)
     .sort({ createdAt: -1 })
-    .populate("createdBy", "fullName email")
+    .populate("createdBy", "fullName email  role")
     .lean();
 
  const matchedAssets = assets.filter((asset) => {
