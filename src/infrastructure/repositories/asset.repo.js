@@ -370,4 +370,9 @@ async advancedGetRawDataKeys({ userId, projectId }) {
 },
   
 
+async deleteById(assetId) {
+  const asset = await Asset.findByIdAndDelete(assetId).lean();
+  return asset ? mapAsset(asset) : null;
+},
+
 };

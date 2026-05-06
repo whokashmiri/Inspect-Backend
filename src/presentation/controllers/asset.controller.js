@@ -192,4 +192,13 @@ async advancedGetRawDataKeys(req, res) {
 
   return res.status(200).json(result);
 },
+
+async deleteAsset(req, res) {
+  const result = await folderAssetService.deleteAsset({
+    userId: req.userId,
+    assetId: req.params.assetId,
+  });
+
+  return res.status(200).json(result);
+},
 };

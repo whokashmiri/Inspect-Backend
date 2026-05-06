@@ -249,6 +249,9 @@ export const folderAssetService = {
     }
 
     await getAccessibleProject(existingAsset.projectId, user);
+    if (existingAsset.createdBy?.toString() !== user.id.toString()) {
+  throw new AppError("Only the asset creator can edit this asset", 403);
+}
 
     const nextAssetType =
       assetType === undefined
@@ -372,6 +375,33 @@ voiceNotes: nextVoiceNotes,
 
     return { asset };
   },
+
+  async deleteAsset({ userId, assetId }) {
+  const user = await userRepository.findById(userId);
+  if (!user) throw new AppError("User not found", 404);
+
+  if (!user.company?.id) {
+    throw new AppError("User is not linked to a company", 400);
+  }
+
+  const existingAsset = await assetRepository.findById(assetId);
+  if (!existingAsset) {
+    throw new AppError("Asset not found", 404);
+  }
+
+  await getAccessibleProject(existingAsset.projectId, user);
+
+  if (existingAsset.createdBy?.id?.toString() !== user.id.toString()) {
+    throw new AppError("Only the asset creator can delete this asset", 403);
+  }
+
+  await assetRepository.deleteById(assetId);
+
+  return {
+    success: true,
+    message: "Asset deleted successfully",
+  };
+},
 
 
 async advancedGetRawDataKeys({ userId, projectId }) {

@@ -55,6 +55,11 @@ router.post(
   asyncWrap(folderAssetController.createAsset)
 );
 
+router.get(
+  "/:projectId/assets/by-code",
+  authenticate,
+  asyncWrap(folderAssetController.getAssetByCode)
+);
 router.patch(
   "/assets/:assetId",
   authenticate,
@@ -62,10 +67,9 @@ router.patch(
   asyncWrap(folderAssetController.updateAsset)
 );
 
-router.get(
-  "/:projectId/assets/by-code",
+router.delete(
+  "/assets/:assetId",
   authenticate,
-  asyncWrap(folderAssetController.getAssetByCode)
+  asyncWrap(folderAssetController.deleteAsset)
 );
-
 export default router;
