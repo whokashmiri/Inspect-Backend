@@ -1,7 +1,5 @@
-
-//models/Project.js
+// models/Project.js
 import mongoose from "mongoose";
-
 
 const inspectorFileSchema = new mongoose.Schema(
   {
@@ -53,11 +51,60 @@ const inspectorFileSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Location Schema
+const locationSchema = new mongoose.Schema(
+  {
+    region: {
+      type: String,
+      trim: true,
+    },
+
+    city: {
+      type: String,
+      trim: true,
+    },
+
+    latitude: {
+      type: Number,
+    },
+
+    longitude: {
+      type: Number,
+    },
+
+    mapUrl: {
+      type: String,
+      trim: true,
+    },
+  },
+  { _id: false }
+);
+
+// Contact Schema
+const contactSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: ["primary", "secondary", "other"],
+      default: "primary",
+    },
+
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+  },
+  { _id: false }
+);
+
 const projectSchema = new mongoose.Schema(
   {
-
- 
-    name: { type: String, required: true, trim: true },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -78,15 +125,37 @@ const projectSchema = new mongoose.Schema(
       trim: true,
     },
 
-       inspectorFiles: {
+    reportType: {
+      type: String,
+      enum: ["simple", "detailed"],
+      default: "simple",
+    },
+
+    reportData: {
+      type: Object,
+      default: {},
+    },
+
+    locations: {
+      type: [locationSchema],
+      default: [],
+    },
+
+    contacts: {
+      type: [contactSchema],
+      default: [],
+    },
+
+    inspectorFiles: {
       type: [inspectorFileSchema],
       default: [],
     },
   },
   {
-    timestamps: true, // createdAt + updatedAt
+    timestamps: true,
   }
 );
 
 export const Project =
-  mongoose.models.Project || mongoose.model("mv_projects", projectSchema);
+  mongoose.models.Project ||
+  mongoose.model("mv_projects", projectSchema);

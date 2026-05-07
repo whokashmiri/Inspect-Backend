@@ -70,6 +70,10 @@ const mapProject = (doc, stats = emptyStats) => {
     workflowStatus: doc.workflowStatus,
     reportType: doc.reportType ?? "simple",
     reportData: doc.reportData ?? {},
+
+    locations: doc.locations || [],
+    contacts: doc.contacts || [],
+
     inspectorFiles: (doc.inspectorFiles || []).map(mapInspectorFile),
     companyId: toId(doc.companyId),
     userId: toId(doc.userId),
@@ -206,6 +210,8 @@ async findInspectorFileById(projectId, fileId) {
   workflowStatus = "new",
   reportType = "simple",
   reportData = {},
+   locations = [],
+  contacts = [],
   inspectorFiles = [],
 }) {
   const project = new Project({
@@ -215,6 +221,8 @@ async findInspectorFileById(projectId, fileId) {
     workflowStatus,
     reportType,
     reportData,
+     locations,
+    contacts,
     inspectorFiles,
   });
 

@@ -19,6 +19,8 @@ export const projectService = {
       companyId: user.company.id || user.company._id,
       userId: user.id,
       workflowStatus: "new",
+      locations: [],
+      contacts: [],
       inspectorFiles: [],
     });
 
@@ -35,11 +37,14 @@ export const projectService = {
 
     const companyId = user.company.id || user.company._id;
     const projects = await projectRepository.findByCompanyId(companyId);
+    
+    
 
     return { projects };
   },
 
  async listInspectorFiles({ userId, projectId }) {
+  
   await this.getCompanyProjectOrThrow({ userId, projectId });
 
   const result = await projectRepository.findInspectorFilesByProjectId(projectId);
@@ -59,6 +64,22 @@ export const projectService = {
   }
 
   return { file: result.file };
+},
+
+async listContacts({ userId, projectId }) {
+  const project = await this.getCompanyProjectOrThrow({ userId, projectId });
+
+  return {
+    contacts: project.contacts || [],
+  };
+},
+
+async listLocations({ userId, projectId }) {
+  const project = await this.getCompanyProjectOrThrow({ userId, projectId });
+
+  return {
+    locations: project.locations || [],
+  };
 },
 
 async getInspectorFileDownloadUrl({ userId, projectId, fileId }) {
