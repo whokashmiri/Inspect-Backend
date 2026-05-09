@@ -5,9 +5,32 @@ const assetImageSchema = new mongoose.Schema(
   {
     url: { type: String, required: true, trim: true },
     publicId: { type: String, default: null, trim: true },
+
+    mediaType: {
+      type: String,
+      enum: ["image", "video"],
+      default: "image",
+    },
+
+    mimeType: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+
+    duration: {
+      type: Number,
+      default: null,
+    },
+
+    thumbnailUrl: {
+      type: String,
+      default: null,
+      trim: true,
+    },
   },
   { timestamps: { createdAt: "createdAt", updatedAt: false } }
-);
+);;
 
 const assetVoiceNoteSchema = new mongoose.Schema(
   {

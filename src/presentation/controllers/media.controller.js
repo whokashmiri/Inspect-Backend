@@ -9,11 +9,23 @@ export const mediaController = {
       throw new AppError("projectId and mediaType are required", 400);
     }
 
-    const isVoice = mediaType === "voice";
+    if (!["image", "voice", "video"].includes(mediaType)) {
+      throw new AppError("Invalid mediaType", 400);
+    }
 
     const timestamp = Math.round(Date.now() / 1000);
-    const folder = isVoice ? "assets/voice-notes" : "assets/images";
-    const publicId = `ABM${projectId}_${Date.now()}`;
+
+    const folder =
+      mediaType === "voice"
+        ? "assets/voice-notes"
+        : mediaType === "video"
+        ? "assets/videos"
+        : "assets/images";
+
+    const resourceType =
+      mediaType === "image" ? "image" : "video";
+
+    const publicId = `ABM${projectId}_${mediaType}_${Date.now()}`;
 
     const signature = cloudinary.utils.api_sign_request(
       {
@@ -31,7 +43,7 @@ export const mediaController = {
       signature,
       folder,
       publicId,
-      resourceType: isVoice ? "video" : "image",
+      resourceType,
     });
   },
 };

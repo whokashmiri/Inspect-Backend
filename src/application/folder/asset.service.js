@@ -48,17 +48,6 @@ function normalizeVehicleOnlyField(assetType, value) {
   return assetType === "vehicle" ? value?.trim() || null : null;
 }
 
-function sanitizeImages(images = []) {
-  if (!Array.isArray(images)) return [];
-
-  return images
-    .filter((item) => item?.url && item?.publicId)
-    .map((item) => ({
-      url: item.url,
-      publicId: item.publicId,
-    }));
-}
-
 function sanitizeVoiceNotes(voiceNotes = []) {
   if (!Array.isArray(voiceNotes)) return [];
 
@@ -74,6 +63,44 @@ function sanitizeVoiceNotes(voiceNotes = []) {
     }));
 }
 
+
+function sanitizeImages(images = []) {
+  if (!Array.isArray(images)) return [];
+
+  return images
+    .filter((item) => {
+      return typeof item?.url === "string" && item.url.trim().length > 0;
+    })
+    .map((item) => {
+      const url = item.url.trim();
+
+      const mediaType =
+        item.mediaType === "video" ||
+        item.mimeType?.startsWith?.("video/") ||
+        url.includes("/video/upload/") ||
+        url.toLowerCase().endsWith(".mp4") ||
+        url.toLowerCase().endsWith(".mov")
+          ? "video"
+          : "image";
+
+      return {
+        url,
+        publicId: item.publicId ?? null,
+        mediaType,
+        mimeType:
+          item.mimeType ??
+          (mediaType === "video" ? "video/mp4" : "image/jpeg"),
+        duration:
+          mediaType === "video" && typeof item.duration === "number"
+            ? Math.round(item.duration)
+            : null,
+        thumbnailUrl:
+          mediaType === "video"
+            ? item.thumbnailUrl ?? null
+            : null,
+      };
+    });
+}
 export const folderAssetService = {
   async createFolder({ userId, projectId, parentId, name }) {
     if (!name?.trim()) throw new AppError("Folder name is required", 400);
@@ -162,7 +189,9 @@ export const folderAssetService = {
   
 
 
+    console.log("SANITIZED IMAGES:", sanitizeImages(images));
     const asset = await assetRepository.create({
+      
       name: name.trim(),
       writtenDescription: normalizedWrittenDescription,
       condition: normalizedCondition,
@@ -264,10 +293,16 @@ const isCreator = assetCreatorId === currentUserId;
     const normalizedCode = normalizeOptionalString(code);
 
   
-    const nextImages = [
-  ...(existingAsset.images || []),
-  ...sanitizeImages(images),
+const existingImages = sanitizeImages(existingAsset.images || []);
+const incomingImages = sanitizeImages(images || []);
+
+const nextImages = [
+  ...existingImages,
+  ...incomingImages,
 ];
+
+
+
 
 const nextVoiceNotes = [
   ...(existingAsset.voiceNotes || []),

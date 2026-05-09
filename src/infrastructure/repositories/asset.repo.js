@@ -56,6 +56,10 @@ const mapImage = (image) => ({
   id: toId(image._id),
   url: image.url,
   publicId: image.publicId ?? null,
+  mediaType: image.mediaType ?? "image",
+  mimeType: image.mimeType ?? null,
+  duration: image.duration ?? null,
+  thumbnailUrl: image.thumbnailUrl ?? null,
   createdAt: image.createdAt,
 });
 
@@ -168,10 +172,16 @@ export const assetRepository = {
       parent: parent || null,
       createdBy,
 
-      images: (images || []).map((item) => ({
-        url: item.url,
-        publicId: item.publicId || null,
-      })),
+      images: (images || [])
+  .filter((item) => item?.url)
+  .map((item) => ({
+    url: item.url,
+    publicId: item.publicId ?? null,
+    mediaType: item.mediaType ?? "image",
+    mimeType: item.mimeType ?? null,
+    duration: item.duration ?? null,
+    thumbnailUrl: item.thumbnailUrl ?? null,
+  })),
 
       voiceNotes: (voiceNotes || []).map((item) => ({
         url: item.url,
