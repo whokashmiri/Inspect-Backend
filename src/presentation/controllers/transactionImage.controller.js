@@ -1,14 +1,10 @@
-
-//transactionImage.controller.js
-import { transactionService } from "../../application/transactions/transactionImages.service.js";
+// transactionImage.controller.js
+import { transactionMediaService } from "../../application/transactions/transactionImages.service.js";
 
 export const transactionMediaController = {
   async addMedia(req, res) {
-  
-    
     try {
       const { transactionId } = req.params;
-       console.log("TRANSACTION ID :" , transactionId);
 
       const media = await transactionMediaService.addMedia(
         transactionId,
