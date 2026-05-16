@@ -1,4 +1,7 @@
-import { TransactionImages } from "../../models/transactionImage.js";
+
+//transactionImages.repo.js
+
+import { TransactionMedia } from "../../models/transactionImage.js";
 
 const mapTransactionMedia = (doc) => {
   if (!doc) return null;

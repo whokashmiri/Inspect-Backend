@@ -51,6 +51,6 @@ const transactionMediaSchema = new mongoose.Schema(
   }
 );
 
-export const TransactionImages =
-  mongoose.models.TransactionImages ||
+export const TransactionMedia =
+  mongoose.models.TransactionMedia ||
   mongoose.model("transaction_images", transactionMediaSchema);
