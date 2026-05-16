@@ -53,4 +53,4 @@ const transactionMediaSchema = new mongoose.Schema(
 
 export const TransactionMedia =
   mongoose.models.TransactionMedia ||
-  mongoose.model("transaction_images", transactionMediaSchema);
+  mongoose.model("TransactionMedia", transactionMediaSchema, "transaction_images");

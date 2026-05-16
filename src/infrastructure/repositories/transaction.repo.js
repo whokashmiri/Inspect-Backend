@@ -52,6 +52,7 @@ export const transactionRepository = {
     if (!id) return null;
 
     const query = Transaction.findById(id);
+    
 
     if (options.session) query.session(options.session);
 

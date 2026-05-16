@@ -5,20 +5,37 @@ import { transactionMediaController } from "../controllers/transactionImage.cont
 import { authenticate } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
-router.get("/", authenticate , transactionController.listTransactions);
 
+router.get("/", authenticate, transactionController.listTransactions);
+
+router.get(
+  "/:transactionId/media",
+  authenticate,
+  transactionMediaController.getMedia
+);
+
+router.post(
+  "/:transactionId/media",
+  authenticate,
+  transactionMediaController.addMedia
+);
+
+router.delete(
+  "/media/:mediaId",
+  authenticate,
+  transactionMediaController.deleteMedia
+);
 
 router.patch(
   "/:transactionId/inspection-data",
+  authenticate,
   transactionController.updateInspectionData
 );
 
-router.post("/:transactionId/media", authenticate, transactionMediaController.addMedia);
-
-router.get("/:transactionId/media", authenticate , transactionMediaController.getMedia);
-
-router.delete("/media/:mediaId", authenticate , transactionMediaController.deleteMedia);
+router.get(
+  "/:transactionId",
+  authenticate,
+  transactionController.getTransactionDetails
+);
 
 export default router;
-
-
