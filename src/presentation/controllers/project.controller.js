@@ -24,14 +24,7 @@ export const projectController = {
     return res.status(200).json(result);
   },
 
-  async listContacts(req, res) {
-  const result = await projectService.listContacts({
-    userId: req.userId,
-    projectId: req.params.projectId,
-  });
-
-  return res.status(200).json(result);
-},
+ 
 
 async listLocations(req, res) {
   const result = await projectService.listLocations({

@@ -8,7 +8,7 @@ const router = Router();
 router.get("/", authenticate, projectController.list);
 router.post("/", authenticate, projectController.create);
 
-router.get("/:projectId/contacts", authenticate, projectController.listContacts);
+
 router.get("/:projectId/locations", authenticate, projectController.listLocations);
 
 router.get("/:projectId/inspector-files", authenticate, projectController.listInspectorFiles);

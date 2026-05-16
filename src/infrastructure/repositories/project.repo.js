@@ -72,7 +72,7 @@ const mapProject = (doc, stats = emptyStats) => {
     reportData: doc.reportData ?? {},
 
     locations: doc.locations || [],
-    contacts: doc.contacts || [],
+   
 
     inspectorFiles: (doc.inspectorFiles || []).map(mapInspectorFile),
     companyId: toId(doc.companyId),
@@ -211,7 +211,7 @@ async findInspectorFileById(projectId, fileId) {
   reportType = "simple",
   reportData = {},
    locations = [],
-  contacts = [],
+ 
   inspectorFiles = [],
 }) {
   const project = new Project({
@@ -222,7 +222,7 @@ async findInspectorFileById(projectId, fileId) {
     reportType,
     reportData,
      locations,
-    contacts,
+    
     inspectorFiles,
   });
 

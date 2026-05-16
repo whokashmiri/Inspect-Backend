@@ -66,21 +66,23 @@ export const projectService = {
   return { file: result.file };
 },
 
-async listContacts({ userId, projectId }) {
-  const project = await this.getCompanyProjectOrThrow({ userId, projectId });
-
-  return {
-    contacts: project.contacts || [],
-  };
-},
-
 async listLocations({ userId, projectId }) {
-  const project = await this.getCompanyProjectOrThrow({ userId, projectId });
+    const project = await this.getCompanyProjectOrThrow({ userId, projectId });
 
-  return {
-    locations: project.locations || [],
-  };
-},
+    return {
+      locations: (project.locations || []).map((location) => ({
+        id: location.id,
+        name: location.name,
+        region: location.region,
+        city: location.city,
+        latitude: location.latitude ?? null,
+        longitude: location.longitude ?? null,
+        mapUrl: location.mapUrl || "",
+        primaryPhone: location.primaryPhone || "",
+        secondaryPhone: location.secondaryPhone || "",
+      })),
+    };
+  },
 
 async getInspectorFileDownloadUrl({ userId, projectId, fileId }) {
   const { file } = await this.getInspectorFile({

@@ -54,6 +54,16 @@ const inspectorFileSchema = new mongoose.Schema(
 // Location Schema
 const locationSchema = new mongoose.Schema(
   {
+    id: {
+      type: String,
+      trim: true,
+    },
+
+    name: {
+      type: String,
+      trim: true,
+    },
+
     region: {
       type: String,
       trim: true,
@@ -66,38 +76,31 @@ const locationSchema = new mongoose.Schema(
 
     latitude: {
       type: Number,
+      default: null,
     },
 
     longitude: {
       type: Number,
+      default: null,
     },
 
     mapUrl: {
       type: String,
       trim: true,
     },
-  },
-  { _id: false }
-);
 
-// Contact Schema
-const contactSchema = new mongoose.Schema(
-  {
-    type: {
+    primaryPhone: {
       type: String,
-      enum: ["primary", "secondary", "other"],
-      default: "primary",
+      trim: true,
     },
 
-    phone: {
+    secondaryPhone: {
       type: String,
-      required: true,
       trim: true,
     },
   },
   { _id: false }
 );
-
 const projectSchema = new mongoose.Schema(
   {
     name: {
@@ -141,10 +144,7 @@ const projectSchema = new mongoose.Schema(
       default: [],
     },
 
-    contacts: {
-      type: [contactSchema],
-      default: [],
-    },
+  
 
     inspectorFiles: {
       type: [inspectorFileSchema],
