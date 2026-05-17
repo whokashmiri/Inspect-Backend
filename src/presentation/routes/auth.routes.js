@@ -20,6 +20,9 @@ router.post(
 router.get("/me", authenticate, asyncWrap(authController.me));
 router.post("/logout", authenticate, asyncWrap(authController.logout));
 
+// Returns the authenticated user's linked company (single-company model)
+router.get("/companies", authenticate, asyncWrap(authController.companies));
+
 function asyncWrap(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 }

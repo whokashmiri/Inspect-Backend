@@ -1,4 +1,7 @@
+
+
 // transactionImage.controller.js
+
 import { transactionMediaService } from "../../application/transactions/transactionImages.service.js";
 
 export const transactionMediaController = {
@@ -32,6 +35,39 @@ export const transactionMediaController = {
 
       return res.status(200).json({
         success: true,
+        data: media,
+      });
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+
+  async getOfflineMedia(req, res) {
+    try {
+      const transactionIds =
+        req.body.transactionIds || req.query.transactionIds;
+
+      let normalizedIds = [];
+
+      if (Array.isArray(transactionIds)) {
+        normalizedIds = transactionIds;
+      } else if (typeof transactionIds === "string") {
+        normalizedIds = transactionIds
+          .split(",")
+          .map((id) => id.trim())
+          .filter(Boolean);
+      }
+
+      const media = await transactionMediaService.getMediaForOffline(
+        normalizedIds
+      );
+
+      return res.status(200).json({
+        success: true,
+        total: media.length,
         data: media,
       });
     } catch (error) {

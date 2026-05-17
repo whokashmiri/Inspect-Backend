@@ -17,6 +17,38 @@ const transactionSchema = new mongoose.Schema(
     branch: String,
     templateId: String,
 
+     // ADD THIS
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+      index: true,
+    },
+
+    // ADD THIS
+    createdByUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    // ADD THIS
+    isCompleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    isOpened: {
+      type: Boolean,
+      default: false,
+    },
+
+    // OPTIONAL BUT VERY USEFUL FOR OFFLINE
+    lastSyncedAt: {
+      type: Date,
+      default: null,
+    },
+
     templateFieldValues: {
       type: Object,
       default: {},

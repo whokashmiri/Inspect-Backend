@@ -1,5 +1,4 @@
-
-//transactionImages.repo.js
+// transactionImages.repo.js
 
 import { TransactionMedia } from "../../models/transactionImage.js";
 
@@ -8,6 +7,8 @@ const mapTransactionMedia = (doc) => {
 
   return {
     id: doc._id.toString(),
+    _id: doc._id.toString(),
+
     transactionId: doc.transactionId?.toString(),
 
     mediaType: doc.mediaType,
@@ -45,6 +46,26 @@ export const transactionMediaRepository = {
 
   async findByTransactionId(transactionId, options = {}) {
     const query = TransactionMedia.find({ transactionId }).sort({
+      sortIndex: 1,
+      uploadedAt: 1,
+    });
+
+    if (options.session) query.session(options.session);
+
+    const media = await query.lean();
+
+    return media.map(mapTransactionMedia);
+  },
+
+  async findByTransactionIds(transactionIds, options = {}) {
+    if (!Array.isArray(transactionIds) || transactionIds.length === 0) {
+      return [];
+    }
+
+    const query = TransactionMedia.find({
+      transactionId: { $in: transactionIds },
+    }).sort({
+      transactionId: 1,
       sortIndex: 1,
       uploadedAt: 1,
     });

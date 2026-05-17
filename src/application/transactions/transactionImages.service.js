@@ -1,5 +1,4 @@
-
-//transactionImages.service.js
+// transactionImages.service.js
 import { transactionRepository } from "../../infrastructure/repositories/transaction.repo.js";
 import { transactionMediaRepository } from "../../infrastructure/repositories/transactionImage.repo.js";
 
@@ -53,8 +52,19 @@ export const transactionMediaService = {
       (item) => item.mediaType === "image"
     ).length;
 
+    const videoCount = createdMedia.filter(
+      (item) => item.mediaType === "video"
+    ).length;
+
     if (imageCount > 0) {
       await transactionRepository.incrementImagesCount(transactionId, imageCount);
+    }
+
+    if (videoCount > 0) {
+      await transactionRepository.incrementAttachmentsCount(
+        transactionId,
+        videoCount
+      );
     }
 
     return createdMedia;
@@ -62,6 +72,14 @@ export const transactionMediaService = {
 
   async getMedia(transactionId) {
     return transactionMediaRepository.findByTransactionId(transactionId);
+  },
+
+  async getMediaForOffline(transactionIds) {
+    if (!Array.isArray(transactionIds) || transactionIds.length === 0) {
+      return [];
+    }
+
+    return transactionMediaRepository.findByTransactionIds(transactionIds);
   },
 
   async deleteMedia(mediaId) {
