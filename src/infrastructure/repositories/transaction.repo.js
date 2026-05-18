@@ -205,6 +205,10 @@ async findByCompanyIdPaginated(
       update.templateFieldValues = payload.templateFieldValues;
     }
 
+    if (payload.inspectionNotes !== undefined) {
+  update["evalData.inspectionNotes"] = payload.inspectionNotes;
+}
+
     update.isCompleted = payload.isCompleted ?? true;
     update.lastSyncedAt = payload.lastSyncedAt ?? new Date();
 
