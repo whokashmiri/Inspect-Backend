@@ -130,7 +130,6 @@ async findByCompanyIdPaginated(
     },
   };
 
-  console.log("TRANSACTION COMPANY STRING:", companyIdString);
 
   const transactionsQuery = Transaction.find(query)
     .sort({ createdAt: -1 })
@@ -149,7 +148,57 @@ async findByCompanyIdPaginated(
     countQuery,
   ]);
 
-  console.log("TRANSACTION TOTAL FOUND:", total);
+
+
+  return {
+    transactions: transactions.map(mapTransaction),
+    total,
+  };
+},
+
+async searchByAssignmentNumberAndCompanyId(
+  { companyId, assignmentNumber, page = 1, limit = 10 },
+  options = {}
+) {
+  const safePage = Math.max(Number(page) || 1, 1);
+  const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 50);
+  const skip = (safePage - 1) * safeLimit;
+
+  const companyIdString = companyId.toString();
+  const searchText = String(assignmentNumber || "").trim();
+
+  const query = {
+    $and: [
+      {
+        $expr: {
+          $eq: [{ $toString: "$companyId" }, companyIdString],
+        },
+      },
+      {
+        assignmentNumber: {
+          $regex: searchText,
+          $options: "i",
+        },
+      },
+    ],
+  };
+
+  const transactionsQuery = Transaction.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(safeLimit);
+
+  const countQuery = Transaction.countDocuments(query);
+
+  if (options.session) {
+    transactionsQuery.session(options.session);
+    countQuery.session(options.session);
+  }
+
+  const [transactions, total] = await Promise.all([
+    transactionsQuery.lean(),
+    countQuery,
+  ]);
 
   return {
     transactions: transactions.map(mapTransaction),

@@ -46,6 +46,13 @@ router.get(
 );
 
 
+router.get(
+  "/company/search",
+  authenticate,
+  transactionController.searchCompanyTransactions
+);
+
+
 router.post(
   "/media/offline",
   authenticate,
@@ -71,6 +78,10 @@ router.post(
   authenticate,
   transactionMediaController.addMedia
 );
+
+
+
+
 
 
 

@@ -30,8 +30,7 @@ async function getCompanyIdFromUser(userOrUserId) {
     .select("_id username company")
     .lean();
 
-  console.log("TRANSACTION AUTH USER ID:", userId);
-  console.log("TRANSACTION USER COMPANY:", user?.company);
+ 
 
   return user?.company?.toString() || null;
 }
@@ -204,4 +203,47 @@ export const transactionService = {
       lastSyncedAt: new Date(),
     });
   },
+
+ async searchCompanyTransactionsByAssignmentNumber(
+  user,
+  { assignmentNumber = "", page = 1, limit = 10 } = {}
+) {
+  const companyId = await getCompanyIdFromUser(user);
+
+  if (!companyId) {
+    throw new Error("User is not linked to a company");
+  }
+
+  const safePage = Math.max(Number(page) || 1, 1);
+  const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 50);
+  const searchText = String(assignmentNumber || "").trim();
+
+  if (!searchText) {
+    return {
+      companyId,
+      page: safePage,
+      limit: safeLimit,
+      total: 0,
+      hasMore: false,
+      transactions: [],
+    };
+  }
+
+  const result =
+    await transactionRepository.searchByAssignmentNumberAndCompanyId({
+      companyId,
+      assignmentNumber: searchText,
+      page: safePage,
+      limit: safeLimit,
+    });
+
+  return {
+    companyId,
+    page: safePage,
+    limit: safeLimit,
+    total: result.total,
+    hasMore: safePage * safeLimit < result.total,
+    transactions: result.transactions,
+  };
+},
 };
