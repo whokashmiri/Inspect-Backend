@@ -4,7 +4,7 @@ import { userRepository } from "../../infrastructure/repositories/user.repo.js";
 import { projectRepository } from "../../infrastructure/repositories/project.repo.js";
 import { folderRepository } from "../../infrastructure/repositories/folder.repo.js";
 import { assetRepository } from "../../infrastructure/repositories/asset.repo.js";
-// import { cloudinaryService } from "../shared/cloudinary.service.js";
+import { Project } from "../../models/Project.js"
 
 async function getAccessibleProject(projectId, user) {
   const project = await projectRepository.findById(projectId);
@@ -48,6 +48,15 @@ function normalizeVehicleOnlyField(assetType, value) {
   return assetType === "vehicle" ? value?.trim() || null : null;
 }
 
+
+async function touchProject(projectId) {
+  if (!projectId) return;
+
+  await Project.updateOne(
+    { _id: projectId },
+    { $currentDate: { updatedAt: true } }
+  );
+}
 function sanitizeVoiceNotes(voiceNotes = []) {
   if (!Array.isArray(voiceNotes)) return [];
 
@@ -212,6 +221,8 @@ export const folderAssetService = {
       isAssetFolder: true,
       createdBy: user.id,
     });
+
+    await touchProject(projectId);
 
     return { asset };
   },
@@ -390,6 +401,8 @@ notes:
       images: nextImages,
 voiceNotes: nextVoiceNotes,
     });
+
+    await touchProject(existingAsset.projectId);
 
     return { asset: updatedAsset };
   },

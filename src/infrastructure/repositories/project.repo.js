@@ -86,6 +86,7 @@ const mapProject = (doc, stats = emptyStats) => {
     workflowStatus: doc.workflowStatus,
     reportType: doc.reportType ?? "simple",
     reportData: doc.reportData ?? {},
+    isFavorite: doc.isFavorite ?? false,
 
     locations,
 
@@ -242,6 +243,7 @@ async findInspectorFileById(projectId, fileId) {
   companyId,
   userId,
   workflowStatus = "new",
+  isFavorite = false,
   reportType = "simple",
   reportData = {},
    locations = [],
@@ -254,6 +256,7 @@ async findInspectorFileById(projectId, fileId) {
     userId,
     workflowStatus,
     reportType,
+    isFavorite,
     reportData,
      locations,
     
@@ -268,7 +271,7 @@ async findInspectorFileById(projectId, fileId) {
 },
 
   async findByCompanyId(companyId) {
-    const query = Project.find({ companyId }).sort({ createdAt: -1 });
+    const query = Project.find({ companyId }).sort({ updatedAt: -1 });
     const projects = await populateProjectQuery(query).lean();
 
     const ids = projects.map((project) => project._id.toString());
@@ -279,8 +282,38 @@ async findInspectorFileById(projectId, fileId) {
     );
   },
 
+async updateById(id, update) {
+  if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
+  console.log("PROJECT UPDATE BY ID:", {
+  id,
+  update,
+});
+
+  const project = await populateProjectQuery(
+    Project.findByIdAndUpdate(id, update, {
+      new: true,
+      runValidators: true,
+      timestamps: false,
+    })
+  ).lean();
+
+  console.log("PROJECT UPDATED DOC:", {
+  id: project?._id,
+  workflowStatus: project?.workflowStatus,
+  isFavorite: project?.isFavorite,
+  createdAt: project?.createdAt,
+  updatedAt: project?.updatedAt,
+});
+
+  if (!project) return null;
+
+  const statsMap = await getStatsMap([project._id.toString()]);
+
+  return mapProject(project, statsMap[project._id.toString()] ?? emptyStats);
+},
+
   async findByCompanyIdAndUserId(companyId, userId) {
-    const query = Project.find({ companyId, userId }).sort({ createdAt: -1 });
+    const query = Project.find({ companyId, userId }).sort({ updatedAt: -1 });
     const projects = await populateProjectQuery(query).lean();
 
     const ids = projects.map((project) => project._id.toString());

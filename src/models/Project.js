@@ -149,6 +149,19 @@ const projectSchema = new mongoose.Schema(
       trim: true,
     },
 
+    workflowStatus: {
+  type: String,
+  enum: ["new", "done"],
+  required: true,
+  default: "new",
+  trim: true,
+},
+
+isFavorite: {
+  type: Boolean,
+  default: false,
+},
+
     reportType: {
       type: String,
       enum: ["simple", "detailed"],

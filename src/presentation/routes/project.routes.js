@@ -8,6 +8,12 @@ const router = Router();
 router.get("/", authenticate, projectController.list);
 router.post("/", authenticate, projectController.create);
 
+router.patch(
+  "/:projectId/workflow",
+  authenticate,
+  projectController.updateWorkflow
+);
+
 
 router.get("/:projectId/locations", authenticate, projectController.listLocations);
 

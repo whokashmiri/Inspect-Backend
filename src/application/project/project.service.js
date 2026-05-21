@@ -21,6 +21,7 @@ export const projectService = {
       workflowStatus: "new",
       locations: [],
       inspectorFiles: [],
+      isFavorite: false,
     });
 
     return { project };
@@ -41,6 +42,28 @@ export const projectService = {
 
     return { projects };
   },
+
+async updateWorkflow({ userId, projectId, workflowStatus, isFavorite }) {
+  await this.getCompanyProjectOrThrow({ userId, projectId });
+
+  const update = {};
+
+  if (workflowStatus !== undefined) {
+    if (!["new", "done"].includes(workflowStatus)) {
+      throw new AppError("Invalid workflow status", 400);
+    }
+
+    update.workflowStatus = workflowStatus;
+  }
+
+  if (isFavorite !== undefined) {
+    update.isFavorite = Boolean(isFavorite);
+  }
+
+  const updatedProject = await projectRepository.updateById(projectId, update);
+
+  return { project: updatedProject };
+},
 
  async listInspectorFiles({ userId, projectId }) {
   
