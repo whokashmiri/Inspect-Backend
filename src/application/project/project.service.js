@@ -103,7 +103,7 @@ async getInspectorFileDownloadUrl({ userId, projectId, fileId }) {
     file,
   };
 },
-  async getCompanyProjectOrThrow({ userId, projectId }) {
+async getCompanyProjectOrThrow({ userId, projectId }) {
     if (!projectId) {
       throw new AppError("Project ID is required", 400);
     }
@@ -128,5 +128,5 @@ async getInspectorFileDownloadUrl({ userId, projectId, fileId }) {
     }
 
     return project;
-  },
+},
 };

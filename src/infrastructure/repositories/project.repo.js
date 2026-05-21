@@ -41,6 +41,8 @@ const emptyStats = {
   incompleteAssets: 0,
   assetsWithNotes: 0,
   assetsWithoutNotes: 0,
+  presentAssets: 0,
+  notPresentAssets: 0,
 };
 
 const mapCompany = (company) => {
@@ -149,9 +151,24 @@ async function getStatsMap(projectIds) {
           $cond: [{ $eq: ["$hasNotes", true] }, 0, 1],
         },
       },
+
+           presentAssets: {
+  $sum: {
+    $cond: [{ $eq: ["$isPresent", true] }, 1, 0],
+  },
+},
+
+notPresentAssets: {
+  $sum: {
+    $cond: [{ $eq: ["$isPresent", false] }, 1, 0],
+  },
+},
       },
     },
   ]);
+
+
+  
 
   return result.reduce((acc, item) => {
     acc[item._id.toString()] = {
@@ -159,7 +176,9 @@ async function getStatsMap(projectIds) {
       doneAssets: item.doneAssets,
       incompleteAssets: item.incompleteAssets,
       assetsWithNotes: item.assetsWithNotes,
-       assetsWithoutNotes: item.assetsWithoutNotes,
+      assetsWithoutNotes: item.assetsWithoutNotes,
+      presentAssets: item.presentAssets,
+      notPresentAssets: item.notPresentAssets,
     };
 
     return acc;
