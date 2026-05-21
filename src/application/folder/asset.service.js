@@ -198,7 +198,7 @@ export const folderAssetService = {
   
 
 
-    console.log("SANITIZED IMAGES:", sanitizeImages(images));
+    
     const asset = await assetRepository.create({
       
       name: name.trim(),

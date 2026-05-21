@@ -13,18 +13,14 @@ export const projectController = {
   },
 
   async updateWorkflow(req, res) {
-    console.log("PROJECT WORKFLOW REQUEST:", {
-  projectId: req.params.projectId,
-  body: req.body,
-  userId: req.userId,
-});
+
   const result = await projectService.updateWorkflow({
     userId: req.userId,
     projectId: req.params.projectId,
     workflowStatus: req.body.workflowStatus,
     isFavorite: req.body.isFavorite,
   });
-  console.log("PROJECT WORKFLOW RESPONSE:", result);
+ 
 
   return res.status(200).json(result);
 },

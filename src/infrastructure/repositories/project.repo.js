@@ -284,10 +284,7 @@ async findInspectorFileById(projectId, fileId) {
 
 async updateById(id, update) {
   if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
-  console.log("PROJECT UPDATE BY ID:", {
-  id,
-  update,
-});
+
 
   const project = await populateProjectQuery(
     Project.findByIdAndUpdate(id, update, {
@@ -297,13 +294,7 @@ async updateById(id, update) {
     })
   ).lean();
 
-  console.log("PROJECT UPDATED DOC:", {
-  id: project?._id,
-  workflowStatus: project?.workflowStatus,
-  isFavorite: project?.isFavorite,
-  createdAt: project?.createdAt,
-  updatedAt: project?.updatedAt,
-});
+
 
   if (!project) return null;
 
