@@ -21,6 +21,11 @@ const inspectorFileSchema = new mongoose.Schema(
       required: true,
     },
 
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+
     storage: {
       type: String,
       default: "digitalocean",
@@ -43,35 +48,39 @@ const inspectorFileSchema = new mongoose.Schema(
       default: 0,
     },
 
-    createdAt: {
-      type: Date,
-      default: Date.now,
+    // NEW: file can belong to one or more locations
+    locationIds: {
+      type: [String],
+      default: [],
     },
   },
   { _id: false }
 );
 
-// Location Schema
 const locationSchema = new mongoose.Schema(
   {
     id: {
       type: String,
+      required: true,
       trim: true,
     },
 
     name: {
       type: String,
       trim: true,
+      default: "",
     },
 
     region: {
       type: String,
       trim: true,
+      default: "",
     },
 
     city: {
       type: String,
       trim: true,
+      default: "",
     },
 
     latitude: {
@@ -87,20 +96,32 @@ const locationSchema = new mongoose.Schema(
     mapUrl: {
       type: String,
       trim: true,
+      default: "",
     },
 
+    // phone now belongs to location
     primaryPhone: {
       type: String,
       trim: true,
+      default: "",
     },
 
     secondaryPhone: {
       type: String,
       trim: true,
+      default: "",
+    },
+
+    // NEW
+    notes: {
+      type: String,
+      trim: true,
+      default: "",
     },
   },
   { _id: false }
 );
+
 const projectSchema = new mongoose.Schema(
   {
     name: {
@@ -144,11 +165,19 @@ const projectSchema = new mongoose.Schema(
       default: [],
     },
 
-  
-
+    // contacts removed intentionally
     inspectorFiles: {
       type: [inspectorFileSchema],
       default: [],
+    },
+
+    inspectionAssignments: {
+      type: Array,
+      default: [],
+    },
+
+    displayNumber: {
+      type: Number,
     },
   },
   {
@@ -157,5 +186,5 @@ const projectSchema = new mongoose.Schema(
 );
 
 export const Project =
-  mongoose.models.Project ||
+  mongoose.models.mv_projects ||
   mongoose.model("mv_projects", projectSchema);

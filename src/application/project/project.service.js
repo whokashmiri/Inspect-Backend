@@ -20,7 +20,6 @@ export const projectService = {
       userId: user.id,
       workflowStatus: "new",
       locations: [],
-      contacts: [],
       inspectorFiles: [],
     });
 
@@ -67,22 +66,24 @@ export const projectService = {
 },
 
 async listLocations({ userId, projectId }) {
-    const project = await this.getCompanyProjectOrThrow({ userId, projectId });
+  const project = await this.getCompanyProjectOrThrow({ userId, projectId });
 
-    return {
-      locations: (project.locations || []).map((location) => ({
-        id: location.id,
-        name: location.name,
-        region: location.region,
-        city: location.city,
-        latitude: location.latitude ?? null,
-        longitude: location.longitude ?? null,
-        mapUrl: location.mapUrl || "",
-        primaryPhone: location.primaryPhone || "",
-        secondaryPhone: location.secondaryPhone || "",
-      })),
-    };
-  },
+  return {
+    locations: (project.locations || []).map((location) => ({
+      id: location.id,
+      name: location.name,
+      region: location.region,
+      city: location.city,
+      latitude: location.latitude ?? null,
+      longitude: location.longitude ?? null,
+      mapUrl: location.mapUrl || "",
+      primaryPhone: location.primaryPhone || "",
+      secondaryPhone: location.secondaryPhone || "",
+      notes: location.notes || "",
+      inspectorFiles: location.inspectorFiles || [],
+    })),
+  };
+},
 
 async getInspectorFileDownloadUrl({ userId, projectId, fileId }) {
   const { file } = await this.getInspectorFile({

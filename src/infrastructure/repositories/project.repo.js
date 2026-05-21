@@ -19,6 +19,7 @@ const mapInspectorFile = (file) => {
     spacesKey: file.spacesKey,
     mimeType: file.mimeType,
     sizeBytes: file.sizeBytes,
+    locationIds: file.locationIds || []
   };
 };
 
@@ -58,9 +59,22 @@ const mapUser = (user) => {
     role: user.role ?? null,
   };
 };
-
 const mapProject = (doc, stats = emptyStats) => {
   if (!doc) return null;
+
+  const inspectorFiles = (doc.inspectorFiles || []).map(mapInspectorFile);
+
+  const locations = (doc.locations || []).map((location) => {
+    const locationId = String(location.id);
+
+    return {
+      ...location,
+      notes: location.notes || "",
+      inspectorFiles: inspectorFiles.filter((file) =>
+        (file.locationIds || []).map(String).includes(locationId)
+      ),
+    };
+  });
 
   return {
     id: toId(doc._id),
@@ -71,10 +85,10 @@ const mapProject = (doc, stats = emptyStats) => {
     reportType: doc.reportType ?? "simple",
     reportData: doc.reportData ?? {},
 
-    locations: doc.locations || [],
-   
+    locations,
 
-    inspectorFiles: (doc.inspectorFiles || []).map(mapInspectorFile),
+    inspectorFiles,
+
     companyId: toId(doc.companyId),
     userId: toId(doc.userId),
     company: mapCompany(doc.companyId),
@@ -82,6 +96,7 @@ const mapProject = (doc, stats = emptyStats) => {
     stats,
   };
 };
+
 const populateProjectQuery = (query) =>
   query.populate("companyId", "name").populate("userId", "username role");
 
@@ -164,7 +179,7 @@ async findInspectorFilesByProjectId(projectId) {
   if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) return null;
 
   const project = await Project.findById(projectId)
-    .select("inspectorFiles companyId userId name")
+    .select("inspectorFiles locations companyId userId name")
     .lean();
 
   if (!project) return null;
@@ -182,7 +197,7 @@ async findInspectorFileById(projectId, fileId) {
   if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) return null;
 
   const project = await Project.findById(projectId)
-    .select("inspectorFiles companyId userId name")
+    .select("inspectorFiles locations companyId userId name")
     .lean();
 
   if (!project) return null;
