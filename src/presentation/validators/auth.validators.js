@@ -1,12 +1,41 @@
 import { z } from "zod";
 
+
 export const loginSchema = z.object({
   username: z.string().trim().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
+
 export const refreshSchema = z.object({
   refreshToken: z.string().min(1, "Refresh token is required"),
+});
+
+
+export const requestSignupOtpSchema = z.object({
+  phone: z.string().trim().min(1, "Phone number is required"),
+});
+
+export const verifySignupOtpSchema = z.object({
+  phone: z.string().trim().min(1, "Phone number is required"),
+
+  otp: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "OTP must be 6 digits"),
+});
+
+export const setSignupPasswordSchema = z.object({
+  setupToken: z.string().min(1, "Setup token is required"),
+
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters"),
+
+  role: z
+    .enum(["Manager", "Inspector", "Valuator", "company_admin"])
+    .optional()
+    .default("Inspector"),
 });
 
 const offlineIdSchema = z

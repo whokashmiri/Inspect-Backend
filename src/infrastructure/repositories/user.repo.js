@@ -32,6 +32,10 @@ const mapUser = (doc, { includePasswordHash = false } = {}) => {
     id: toId(doc._id),
     username: doc.username,
     usernameLower: doc.usernameLower,
+
+    phone: doc.phone ?? null,
+    isPhoneVerified: doc.isPhoneVerified ?? false,
+
     role: doc.role,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt ?? null,
@@ -61,6 +65,27 @@ export const userRepository = {
     const user = await query.populate("company", "name").lean();
     return mapUser(user);
   },
+
+
+  async findByPhone(phone) {
+  if (!phone) return null;
+
+  const user = await User.findOne({ phone })
+    .populate("company", "name")
+    .lean();
+
+  return mapUser(user, { includePasswordHash: true });
+},
+
+async create(data) {
+  const user = await User.create(data);
+
+  const populated = await User.findById(user._id)
+    .populate("company", "name")
+    .lean();
+
+  return mapUser(populated, { includePasswordHash: true });
+},
 
   async updateLastLogin(id) {
     if (!id) return null;

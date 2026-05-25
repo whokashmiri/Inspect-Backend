@@ -1,6 +1,27 @@
 import { authService } from "../../application/auth/auth.service.js";
 
 export const authController = {
+  async requestSignupOtp(req, res) {
+    console.log("signup/request-otp/post");
+
+    const result = await authService.requestSignupOtp(req.body);
+    res.status(200).json(result);
+  },
+
+  async verifySignupOtp(req, res) {
+    console.log("signup/verify-otp/post");
+
+    const result = await authService.verifySignupOtp(req.body);
+    res.status(200).json(result);
+  },
+
+  async setSignupPassword(req, res) {
+    console.log("signup/set-password/post");
+
+    const result = await authService.setSignupPassword(req.body);
+    res.status(201).json(result);
+  },
+
   async login(req, res) {
     console.log("login/post");
 
@@ -10,12 +31,14 @@ export const authController = {
 
   async refresh(req, res) {
     console.log("refresh/post");
+
     const result = await authService.refresh(req.body.refreshToken);
     res.json(result);
   },
 
   async me(req, res) {
     console.log("me/get");
+
     const user = await authService.me(req.userId);
     res.json(user);
   },
@@ -34,7 +57,6 @@ export const authController = {
       ? [{ id: user.companyId ?? null, name: user.companyName }]
       : [];
 
-    // Normalize: if backend returns only name, omit id
     const normalizedCompanies = companies
       .filter((c) => !!c.name)
       .map((c) => ({ id: c.id ?? null, name: c.name }));

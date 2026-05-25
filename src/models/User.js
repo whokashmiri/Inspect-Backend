@@ -1,29 +1,39 @@
-//models/User.js
+// models/User.js
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
     username: {
       type: String,
-      required: true,
-      unique: true,
       trim: true,
+      default: null,
     },
+
     usernameLower: {
+      type: String,
+      lowercase: true,
+      index: true,
+      sparse: true,
+    },
+
+    // NEW
+    phone: {
       type: String,
       required: true,
       unique: true,
-      lowercase: true,
       index: true,
     },
 
     role: {
       type: String,
       required: true,
-      enum: ["Manager", "Inspector", "Valuator", "company_admin"], // added your new role
+      enum: ["Manager", "Inspector", "Valuator", "company_admin"],
     },
 
-    passwordHash: { type: String, required: true },
+    passwordHash: {
+      type: String,
+      required: true,
+    },
 
     company: {
       type: mongoose.Schema.Types.ObjectId,
@@ -31,21 +41,36 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
-    // 🔒 optional but important for login control
-    isBlocked: { type: Boolean, default: false },
-    blockedAt: { type: Date, default: null },
-    lastLoginAt: { type: Date, default: null },
+    isPhoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    isBlocked: {
+      type: Boolean,
+      default: false,
+    },
+
+    blockedAt: {
+      type: Date,
+      default: null,
+    },
+
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
-    timestamps: true, // gives createdAt + updatedAt
+    timestamps: true,
   }
 );
 
-// 🔥 ensure usernameLower is always set
 userSchema.pre("save", function (next) {
   if (this.username) {
     this.usernameLower = this.username.toLowerCase();
   }
+
   next();
 });
 
