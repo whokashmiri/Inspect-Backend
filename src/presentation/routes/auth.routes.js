@@ -6,7 +6,7 @@ import { validate } from "../middleware/validate.middleware.js";
 import {
   loginSchema,
   refreshSchema,
-
+  completeProfileSchema,
   requestSignupOtpSchema,
   verifySignupOtpSchema,
   setSignupPasswordSchema,
@@ -52,6 +52,13 @@ router.get(
   "/me",
   authenticate,
   asyncWrap(authController.me)
+);
+
+router.put(
+  "/me/profile",
+  authenticate,
+  validate(completeProfileSchema),
+  asyncWrap(authController.completeProfile)
 );
 
 // LOGOUT

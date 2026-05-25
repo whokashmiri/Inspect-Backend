@@ -59,6 +59,11 @@ const mapUser = (user) => {
     id: toId(user._id ?? user),
     username: user.username ?? null,
     role: user.role ?? null,
+    name: user.name ?? null,
+    phone: user.phone ?? null,
+    serviceCities: user.serviceCities ?? [],
+    isProfileCompleted: user.isProfileCompleted ?? false,
+    isPhoneVerified: user.isPhoneVerified ?? false,
   };
 };
 const mapProject = (doc, stats = emptyStats) => {

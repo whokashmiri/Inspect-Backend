@@ -30,6 +30,23 @@ const userSchema = new mongoose.Schema(
       enum: ["Manager", "Inspector", "Valuator", "company_admin"],
     },
 
+    name: {
+  type: String,
+  trim: true,
+  default: null,
+},
+
+serviceCities: {
+  type: [String],
+  default: [],
+  index: true,
+},
+
+isProfileCompleted: {
+  type: Boolean,
+  default: false,
+},
+
     passwordHash: {
       type: String,
       required: true,

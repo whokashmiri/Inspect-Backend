@@ -15,6 +15,11 @@ export const authController = {
     res.status(200).json(result);
   },
 
+  async completeProfile(req, res) {
+  const result = await authService.completeProfile(req.userId, req.body);
+  res.json(result);
+},
+
   async setSignupPassword(req, res) {
     console.log("signup/set-password/post");
 

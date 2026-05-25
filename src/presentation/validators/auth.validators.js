@@ -11,6 +11,14 @@ export const refreshSchema = z.object({
   refreshToken: z.string().min(1, "Refresh token is required"),
 });
 
+export const completeProfileSchema = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+
+  serviceCities: z
+    .array(z.string().trim().min(1))
+    .min(1, "At least one city is required"),
+});
+
 
 export const requestSignupOtpSchema = z.object({
   phone: z.string().trim().min(1, "Phone number is required"),

@@ -27,23 +27,25 @@ const mapCompany = (company) => {
 
 const mapUser = (doc, { includePasswordHash = false } = {}) => {
   if (!doc) return null;
+const user = {
+  id: toId(doc._id),
+  username: doc.username,
+  usernameLower: doc.usernameLower,
 
-  const user = {
-    id: toId(doc._id),
-    username: doc.username,
-    usernameLower: doc.usernameLower,
+  phone: doc.phone ?? null,
+  name: doc.name ?? null,
+  serviceCities: Array.isArray(doc.serviceCities) ? doc.serviceCities : [],
+  isProfileCompleted: doc.isProfileCompleted ?? false,
+  isPhoneVerified: doc.isPhoneVerified ?? false,
 
-    phone: doc.phone ?? null,
-    isPhoneVerified: doc.isPhoneVerified ?? false,
-
-    role: doc.role,
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt ?? null,
-    lastLoginAt: doc.lastLoginAt ?? null,
-    isBlocked: doc.isBlocked ?? false,
-    blockedAt: doc.blockedAt ?? null,
-    company: mapCompany(doc.company),
-  };
+  role: doc.role,
+  createdAt: doc.createdAt,
+  updatedAt: doc.updatedAt ?? null,
+  lastLoginAt: doc.lastLoginAt ?? null,
+  isBlocked: doc.isBlocked ?? false,
+  blockedAt: doc.blockedAt ?? null,
+  company: mapCompany(doc.company),
+};
 
   if (includePasswordHash) {
     user.passwordHash = doc.passwordHash;
@@ -108,6 +110,22 @@ async create(data) {
       expiresAt,
     });
   },
+
+  async updateProfile(userId, data) {
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      name: data.name,
+      serviceCities: data.serviceCities,
+      isProfileCompleted: true,
+    },
+    { new: true }
+  )
+    .populate("company", "name")
+    .lean();
+
+  return mapUser(user);
+},
 
   async findRefreshToken(token) {
     const doc = await RefreshToken.findOne({ token }).lean();
