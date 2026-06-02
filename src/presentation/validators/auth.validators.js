@@ -30,7 +30,7 @@ export const verifySignupOtpSchema = z.object({
   otp: z
     .string()
     .trim()
-    .regex(/^\d{6}$/, "OTP must be 6 digits"),
+    .regex(/^\d{4}$/, "OTP must be 4 digits"),
 });
 
 export const setSignupPasswordSchema = z.object({
