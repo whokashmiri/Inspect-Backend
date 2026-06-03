@@ -132,6 +132,32 @@ async verifySignupOtp({ phone, otp }) {
     return buildAuthResponse(record);
   },
 
+  async completeProfile(userId, payload) {
+  const user = await userRepository.findById(userId);
+  if (!user) throw new AppError("User not found", 404);
+
+  const name = payload.name?.trim();
+  const serviceCities = Array.isArray(payload.serviceCities)
+    ? payload.serviceCities
+    : [];
+
+  if (!name) {
+    throw new AppError("Name is required", 400);
+  }
+
+  if (serviceCities.length === 0) {
+    throw new AppError("At least one service city is required", 400);
+  }
+
+  const updatedUser = await userRepository.updateProfile(userId, {
+    name,
+    serviceCities,
+    isProfileCompleted: true,
+  });
+
+  return formatUser(updatedUser);
+},
+
   async refresh(refreshToken) {
     const stored = await userRepository.findRefreshToken(refreshToken);
     if (!stored) throw new AppError("Invalid refresh token", 401);
