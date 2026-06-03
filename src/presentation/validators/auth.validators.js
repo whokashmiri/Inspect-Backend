@@ -41,9 +41,9 @@ export const setSignupPasswordSchema = z.object({
     .min(6, "Password must be at least 6 characters"),
 
   role: z
-    .enum(["Manager", "Inspector", "Valuator", "company_admin"])
+    .enum(["Manager", "Inspector", "Valuator", "company_admin" , "Freelance Inspector"])
     .optional()
-    .default("Inspector"),
+    .default("Freelance Inspector"),
 });
 
 const offlineIdSchema = z
