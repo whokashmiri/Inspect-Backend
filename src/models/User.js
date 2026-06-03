@@ -22,12 +22,14 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
       index: true,
+      
     },
 
     role: {
       type: String,
       required: true,
-      enum: ["Manager", "Inspector", "Valuator", "company_admin"],
+      default: "Freelance Inspector",
+      enum: ["Manager", "Inspector", "Valuator", "company_admin" , "Freelance Inspector"],
     },
 
     name: {
