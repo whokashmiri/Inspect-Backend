@@ -3,7 +3,19 @@ import { transactionRepository } from "../../infrastructure/repositories/transac
 import { transactionMediaRepository } from "../../infrastructure/repositories/transactionImage.repo.js";
 import { User } from "../../models/User.js";
 
-import mongoose from "mongoose";
+function normalizeTransactionId(transaction) {
+  return String(transaction?._id || transaction?.id || "");
+}
+
+function getUserId(userOrUserId) {
+  return String(
+    userOrUserId?.id ||
+      userOrUserId?._id ||
+      userOrUserId?.userId ||
+      userOrUserId ||
+      ""
+  );
+}
 
 async function getCompanyIdFromUser(userOrUserId) {
   if (!userOrUserId) return null;
@@ -14,42 +26,14 @@ async function getCompanyIdFromUser(userOrUserId) {
     userOrUserId?.companyId ||
     userOrUserId?.company;
 
-  if (directCompany) {
-    return directCompany.toString();
-  }
+  if (directCompany) return directCompany.toString();
 
-  const userId =
-    userOrUserId?.id ||
-    userOrUserId?._id ||
-    userOrUserId?.userId ||
-    userOrUserId;
-
+  const userId = getUserId(userOrUserId);
   if (!userId) return null;
 
-  const user = await User.findById(userId)
-    .select("_id username company")
-    .lean();
-
- 
+  const user = await User.findById(userId).select("_id username company").lean();
 
   return user?.company?.toString() || null;
-}
-
-function buildCompanyIdQueryValues(companyId) {
-  const values = [];
-
-  if (!companyId) return values;
-
-  values.push(companyId.toString());
-
-  if (mongoose.Types.ObjectId.isValid(companyId)) {
-    values.push(new mongoose.Types.ObjectId(companyId));
-  }
-
-  return values;
-}
-function normalizeTransactionId(transaction) {
-  return String(transaction?._id || transaction?.id || "");
 }
 
 export const transactionService = {
@@ -59,22 +43,21 @@ export const transactionService = {
 
   async listCompanyTransactions(user, { page = 1, limit = 10 } = {}) {
     const companyId = await getCompanyIdFromUser(user);
-
-    if (!companyId) {
-      throw new Error("User is not linked to a company");
-    }
+    const userId = getUserId(user);
 
     const safePage = Math.max(Number(page) || 1, 1);
     const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 50);
 
-    const result = await transactionRepository.findByCompanyIdPaginated({
+    const result = await transactionRepository.findAccessiblePaginated({
       companyId,
+      userId,
       page: safePage,
       limit: safeLimit,
     });
 
     return {
       companyId,
+      userId,
       page: safePage,
       limit: safeLimit,
       total: result.total,
@@ -85,16 +68,14 @@ export const transactionService = {
 
   async downloadCompanyTransactions(user, { page = 1, limit = 10 } = {}) {
     const companyId = await getCompanyIdFromUser(user);
-
-    if (!companyId) {
-      throw new Error("User is not linked to a company");
-    }
+    const userId = getUserId(user);
 
     const safePage = Math.max(Number(page) || 1, 1);
     const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 50);
 
-    const result = await transactionRepository.findByCompanyIdPaginated({
+    const result = await transactionRepository.findAccessiblePaginated({
       companyId,
+      userId,
       page: safePage,
       limit: safeLimit,
     });
@@ -118,6 +99,7 @@ export const transactionService = {
 
     return {
       companyId,
+      userId,
       page: safePage,
       limit: safeLimit,
       total: result.total,
@@ -135,14 +117,12 @@ export const transactionService = {
 
   async getTransactionDetails(user, transactionId) {
     const companyId = await getCompanyIdFromUser(user);
+    const userId = getUserId(user);
 
-    if (!companyId) {
-      throw new Error("User is not linked to a company");
-    }
-
-    const transaction = await transactionRepository.findByIdAndCompanyId({
+    const transaction = await transactionRepository.findAccessibleById({
       transactionId,
       companyId,
+      userId,
     });
 
     if (!transaction) {
@@ -164,14 +144,12 @@ export const transactionService = {
 
   async markTransactionOpened(user, transactionId) {
     const companyId = await getCompanyIdFromUser(user);
+    const userId = getUserId(user);
 
-    if (!companyId) {
-      throw new Error("User is not linked to a company");
-    }
-
-    const transaction = await transactionRepository.findByIdAndCompanyId({
+    const transaction = await transactionRepository.findAccessibleById({
       transactionId,
       companyId,
+      userId,
     });
 
     if (!transaction) {
@@ -183,14 +161,12 @@ export const transactionService = {
 
   async updateInspectionData(user, transactionId, payload) {
     const companyId = await getCompanyIdFromUser(user);
+    const userId = getUserId(user);
 
-    if (!companyId) {
-      throw new Error("User is not linked to a company");
-    }
-
-    const transaction = await transactionRepository.findByIdAndCompanyId({
+    const transaction = await transactionRepository.findAccessibleById({
       transactionId,
       companyId,
+      userId,
     });
 
     if (!transaction) {
@@ -204,46 +180,45 @@ export const transactionService = {
     });
   },
 
- async searchCompanyTransactionsByAssignmentNumber(
-  user,
-  { assignmentNumber = "", page = 1, limit = 10 } = {}
-) {
-  const companyId = await getCompanyIdFromUser(user);
+  async searchCompanyTransactionsByAssignmentNumber(
+    user,
+    { assignmentNumber = "", page = 1, limit = 10 } = {}
+  ) {
+    const companyId = await getCompanyIdFromUser(user);
+    const userId = getUserId(user);
 
-  if (!companyId) {
-    throw new Error("User is not linked to a company");
-  }
+    const safePage = Math.max(Number(page) || 1, 1);
+    const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 50);
+    const searchText = String(assignmentNumber || "").trim();
 
-  const safePage = Math.max(Number(page) || 1, 1);
-  const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 50);
-  const searchText = String(assignmentNumber || "").trim();
+    if (!searchText) {
+      return {
+        companyId,
+        userId,
+        page: safePage,
+        limit: safeLimit,
+        total: 0,
+        hasMore: false,
+        transactions: [],
+      };
+    }
 
-  if (!searchText) {
-    return {
+    const result = await transactionRepository.searchAccessibleByAssignmentNumber({
       companyId,
-      page: safePage,
-      limit: safeLimit,
-      total: 0,
-      hasMore: false,
-      transactions: [],
-    };
-  }
-
-  const result =
-    await transactionRepository.searchByAssignmentNumberAndCompanyId({
-      companyId,
+      userId,
       assignmentNumber: searchText,
       page: safePage,
       limit: safeLimit,
     });
 
-  return {
-    companyId,
-    page: safePage,
-    limit: safeLimit,
-    total: result.total,
-    hasMore: safePage * safeLimit < result.total,
-    transactions: result.transactions,
-  };
-},
+    return {
+      companyId,
+      userId,
+      page: safePage,
+      limit: safeLimit,
+      total: result.total,
+      hasMore: safePage * safeLimit < result.total,
+      transactions: result.transactions,
+    };
+  },
 };
