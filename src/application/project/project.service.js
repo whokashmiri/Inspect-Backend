@@ -27,26 +27,54 @@ export const projectService = {
     return { project };
   },
 
-async list(userId) {
+async list(userId, filters = {}) {
   const user = await userRepository.findById(userId);
   if (!user) throw new AppError("User not found", 404);
 
-  const companyId = user.company?.id || user.company?._id;
+  const requestedCompanyId = filters.companyId
+    ? String(filters.companyId)
+    : null;
 
-  const companyProjects = companyId
-    ? await projectRepository.findByCompanyId(companyId)
+  const userCompanyId = user.company?.id || user.company?._id;
+
+  const companyProjects = userCompanyId
+    ? await projectRepository.findByCompanyId(userCompanyId)
     : [];
 
-  const inspectorProjects =
-    await projectRepository.findByInspectorUserId(user.id || user._id);
+  const inspectorProjects = await projectRepository.findByInspectorUserId(
+    user.id || user._id
+  );
 
   const map = new Map();
 
   [...companyProjects, ...inspectorProjects].forEach((project) => {
-    map.set(String(project._id || project.id), project);
+    map.set(String(project.id || project._id), project);
   });
 
-  return { projects: Array.from(map.values()) };
+  let projects = Array.from(map.values());
+
+  if (requestedCompanyId) {
+    projects = projects.filter(
+      (project) => String(project.companyId) === requestedCompanyId
+    );
+  }
+
+  const companiesMap = new Map();
+
+  projects.forEach((project) => {
+    if (!project.companyId) return;
+
+    companiesMap.set(String(project.companyId), {
+      id: String(project.companyId),
+      name: project.company?.name || "",
+    });
+  });
+
+  return {
+    projects,
+    companies: Array.from(companiesMap.values()),
+    selectedCompanyId: requestedCompanyId,
+  };
 },
 
 async updateWorkflow({ userId, projectId, workflowStatus, isFavorite }) {
