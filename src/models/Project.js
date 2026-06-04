@@ -122,6 +122,50 @@ const locationSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const inspectionAssignmentSchema = new mongoose.Schema(
+  {
+    id: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    inspectorUserId: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    inspectorName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    locationIds: {
+      type: [String],
+      default: [],
+    },
+
+    assignedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
+
 const projectSchema = new mongoose.Schema(
   {
     name: {
@@ -142,12 +186,12 @@ const projectSchema = new mongoose.Schema(
       required: true,
     },
 
-    workflowStatus: {
-      type: String,
-      required: true,
-      default: "new",
-      trim: true,
-    },
+    // workflowStatus: {
+    //   type: String,
+    //   required: true,
+    //   default: "new",
+    //   trim: true,
+    // },
 
     workflowStatus: {
   type: String,
@@ -185,9 +229,9 @@ isFavorite: {
     },
 
     inspectionAssignments: {
-      type: Array,
-      default: [],
-    },
+  type: [inspectionAssignmentSchema],
+  default: [],
+},
 
     displayNumber: {
       type: Number,
