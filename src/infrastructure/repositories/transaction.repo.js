@@ -26,6 +26,30 @@ function companyIdQuery(companyId) {
 
   return { $in: values };
 }
+
+function buildAccessibleQuery({ companyId, userId }) {
+  const or = [];
+
+  if (companyId) {
+    or.push({
+      $expr: {
+        $eq: [{ $toString: "$companyId" }, companyId.toString()],
+      },
+    });
+  }
+
+  if (userId) {
+    or.push({
+      assignedInspectorIds: String(userId),
+    });
+  }
+
+  if (or.length === 0) {
+    return { _id: null };
+  }
+
+  return { $or: or };
+}
 const mapTransaction = (doc) => {
   if (!doc) return null;
 
@@ -47,8 +71,14 @@ const mapTransaction = (doc) => {
     branch: doc.branch,
     templateId: doc.templateId,
 
+    
+
     companyId: doc.companyId?.toString?.() || doc.companyId,
     createdByUserId: doc.createdByUserId?.toString?.() || doc.createdByUserId,
+
+    assignedInspectorIds: doc.assignedInspectorIds || [],
+
+
 
     isCompleted: doc.isCompleted ?? false,
     isOpened: doc.isOpened ?? false,
@@ -90,6 +120,106 @@ export const transactionRepository = {
 
     return mapTransaction(transaction);
   },
+
+
+  async findAccessiblePaginated(
+  { companyId, userId, page = 1, limit = 10 },
+  options = {}
+) {
+  const safePage = Math.max(Number(page) || 1, 1);
+  const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 50);
+  const skip = (safePage - 1) * safeLimit;
+
+  const query = buildAccessibleQuery({ companyId, userId });
+
+  const transactionsQuery = Transaction.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(safeLimit);
+
+  const countQuery = Transaction.countDocuments(query);
+
+  if (options.session) {
+    transactionsQuery.session(options.session);
+    countQuery.session(options.session);
+  }
+
+  const [transactions, total] = await Promise.all([
+    transactionsQuery.lean(),
+    countQuery,
+  ]);
+
+  return {
+    transactions: transactions.map(mapTransaction),
+    total,
+  };
+},
+
+async findAccessibleById(
+  { transactionId, companyId, userId },
+  options = {}
+) {
+  if (!transactionId) return null;
+
+  const accessQuery = buildAccessibleQuery({ companyId, userId });
+
+  const query = Transaction.findOne({
+    _id: toObjectId(transactionId),
+    ...accessQuery,
+  });
+
+  if (options.session) query.session(options.session);
+
+  const transaction = await query.lean();
+
+  return mapTransaction(transaction);
+},
+
+async searchAccessibleByAssignmentNumber(
+  { companyId, userId, assignmentNumber, page = 1, limit = 10 },
+  options = {}
+) {
+  const safePage = Math.max(Number(page) || 1, 1);
+  const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 50);
+  const skip = (safePage - 1) * safeLimit;
+  const searchText = String(assignmentNumber || "").trim();
+
+  const accessQuery = buildAccessibleQuery({ companyId, userId });
+
+  const query = {
+    $and: [
+      accessQuery,
+      {
+        assignmentNumber: {
+          $regex: searchText,
+          $options: "i",
+        },
+      },
+    ],
+  };
+
+  const transactionsQuery = Transaction.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(safeLimit);
+
+  const countQuery = Transaction.countDocuments(query);
+
+  if (options.session) {
+    transactionsQuery.session(options.session);
+    countQuery.session(options.session);
+  }
+
+  const [transactions, total] = await Promise.all([
+    transactionsQuery.lean(),
+    countQuery,
+  ]);
+
+  return {
+    transactions: transactions.map(mapTransaction),
+    total,
+  };
+},
 
  async findByIdAndCompanyId({ transactionId, companyId }, options = {}) {
   if (!transactionId || !companyId) return null;
