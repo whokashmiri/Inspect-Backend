@@ -25,10 +25,13 @@ export const projectController = {
   return res.status(200).json(result);
 },
 
-  async list(req, res) {
-    const result = await projectService.list(req.userId);
-    return res.status(200).json(result);
-  },
+async list(req, res) {
+  const result = await projectService.list(req.userId, {
+    companyId: req.query.companyId,
+  });
+
+  return res.status(200).json(result);
+},
 
   async listInspectorFiles(req, res) {
     const result = await projectService.listInspectorFiles({

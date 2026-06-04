@@ -219,6 +219,25 @@ async findRawById(id) {
   return Project.findById(id).lean();
 },
 
+
+async findByInspectorUserIdAndCompanyId(userId, companyId) {
+  if (!userId || !companyId) return [];
+
+  const query = Project.find({
+    companyId,
+    "inspectionAssignments.inspectorUserId": String(userId),
+  }).sort({ updatedAt: -1 });
+
+  const projects = await populateProjectQuery(query).lean();
+
+  const ids = projects.map((project) => project._id.toString());
+  const statsMap = await getStatsMap(ids);
+
+  return projects.map((project) =>
+    mapProject(project, statsMap[project._id.toString()] ?? emptyStats)
+  );
+},
+
 async findInspectorFilesByProjectId(projectId) {
   if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) return null;
 

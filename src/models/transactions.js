@@ -1,8 +1,7 @@
 import mongoose from "mongoose";
 
 const transactionSchema = new mongoose.Schema(
-     {
-    
+  {
     assignmentNumber: String,
     authorizationNumber: String,
     assignmentDate: String,
@@ -17,7 +16,6 @@ const transactionSchema = new mongoose.Schema(
     branch: String,
     templateId: String,
 
-     // ADD THIS
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
@@ -25,25 +23,29 @@ const transactionSchema = new mongoose.Schema(
       index: true,
     },
 
-    // ADD THIS
     createdByUserId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
 
-    // ADD THIS
+    assignedInspectorIds: {
+      type: [String],
+      default: [],
+      index: true,
+    },
+
     isCompleted: {
       type: Boolean,
       default: false,
       index: true,
     },
+
     isOpened: {
       type: Boolean,
       default: false,
     },
 
-    // OPTIONAL BUT VERY USEFUL FOR OFFLINE
     lastSyncedAt: {
       type: Date,
       default: null,
@@ -79,6 +81,9 @@ const transactionSchema = new mongoose.Schema(
     collection: "transactions",
   }
 );
+
+transactionSchema.index({ companyId: 1, updatedAt: -1 });
+transactionSchema.index({ assignedInspectorIds: 1, updatedAt: -1 });
 
 export const Transaction =
   mongoose.models.Transaction ||
