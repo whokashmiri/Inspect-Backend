@@ -23,6 +23,21 @@ const mapInspectorFile = (file) => {
   };
 };
 
+
+const mapInspectionAssignment = (assignment) => {
+  if (!assignment) return null;
+
+  return {
+    id: assignment.id,
+    inspectorUserId: toId(assignment.inspectorUserId),
+    inspectorName: assignment.inspectorName ?? "",
+    locationIds: assignment.locationIds || [],
+    assignedBy: toId(assignment.assignedBy),
+    createdAt: assignment.createdAt,
+    updatedAt: assignment.updatedAt,
+  };
+};
+
 const toId = (value) => {
   if (!value) return null;
   if (typeof value === "string") return value;
@@ -96,6 +111,10 @@ const mapProject = (doc, stats = emptyStats) => {
     locations,
 
     inspectorFiles,
+
+    inspectionAssignments: (doc.inspectionAssignments || []).map(
+  mapInspectionAssignment
+),
 
     companyId: toId(doc.companyId),
     userId: toId(doc.userId),
@@ -216,6 +235,24 @@ async findInspectorFilesByProjectId(projectId) {
     projectName: project.name,
     inspectorFiles: (project.inspectorFiles || []).map(mapInspectorFile),
   };
+},
+
+
+async findByInspectorUserId(userId) {
+  if (!userId) return [];
+
+  const query = Project.find({
+    "inspectionAssignments.inspectorUserId": String(userId),
+  }).sort({ updatedAt: -1 });
+
+  const projects = await populateProjectQuery(query).lean();
+
+  const ids = projects.map((project) => project._id.toString());
+  const statsMap = await getStatsMap(ids);
+
+  return projects.map((project) =>
+    mapProject(project, statsMap[project._id.toString()] ?? emptyStats)
+  );
 },
 
 async findInspectorFileById(projectId, fileId) {
