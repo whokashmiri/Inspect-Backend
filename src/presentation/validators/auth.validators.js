@@ -46,6 +46,27 @@ export const setSignupPasswordSchema = z.object({
     .default("Freelance Inspector"),
 });
 
+export const requestPasswordResetOtpSchema = z.object({
+  phone: z.string().trim().min(1, "Phone number is required"),
+});
+
+export const verifyPasswordResetOtpSchema = z.object({
+  phone: z.string().trim().min(1, "Phone number is required"),
+
+  otp: z
+    .string()
+    .trim()
+    .regex(/^\d{4}$/, "OTP must be 4 digits"),
+});
+
+export const resetPasswordSchema = z.object({
+  resetToken: z.string().min(1, "Reset token is required"),
+
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters"),
+});
+
 const offlineIdSchema = z
   .string()
   .regex(/^(?:offline_[A-Za-z0-9_-]+|[0-9a-fA-F]{24})$/, {

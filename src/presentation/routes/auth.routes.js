@@ -10,6 +10,10 @@ import {
   requestSignupOtpSchema,
   verifySignupOtpSchema,
   setSignupPasswordSchema,
+
+  requestPasswordResetOtpSchema,
+verifyPasswordResetOtpSchema,
+resetPasswordSchema,
 } from "../validators/auth.validators.js";
 
 const router = Router();
@@ -31,6 +35,26 @@ router.post(
   "/signup/set-password",
   validate(setSignupPasswordSchema),
   asyncWrap(authController.setSignupPassword)
+);
+
+
+// FORGOT / RESET PASSWORD
+router.post(
+  "/forgot-password/request-otp",
+  validate(requestPasswordResetOtpSchema),
+  asyncWrap(authController.requestPasswordResetOtp)
+);
+
+router.post(
+  "/forgot-password/verify-otp",
+  validate(verifyPasswordResetOtpSchema),
+  asyncWrap(authController.verifyPasswordResetOtp)
+);
+
+router.post(
+  "/forgot-password/reset",
+  validate(resetPasswordSchema),
+  asyncWrap(authController.resetPassword)
 );
 
 // LOGIN

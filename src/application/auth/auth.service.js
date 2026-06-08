@@ -132,6 +132,29 @@ async verifySignupOtp({ phone, otp }) {
     return buildAuthResponse(record);
   },
 
+
+
+
+  async requestPasswordResetOtp({ phone }) {
+  const normalizedPhone = normalizeSaudiPhone(phone);
+
+  const user = await userRepository.findByPhone(normalizedPhone);
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  await sendAuthenticaOtp({
+    phone: normalizedPhone,
+    templateId: process.env.AUTHENTICA_TEMPLATE_ID || 5,
+  });
+
+  return {
+    success: true,
+    message: "OTP sent successfully",
+  };
+},
+
   async completeProfile(userId, payload) {
   const user = await userRepository.findById(userId);
   if (!user) throw new AppError("User not found", 404);
@@ -156,6 +179,84 @@ async verifySignupOtp({ phone, otp }) {
   });
 
   return formatUser(updatedUser);
+},
+
+async verifyPasswordResetOtp({ phone, otp }) {
+  const normalizedPhone = normalizeSaudiPhone(phone);
+
+  const result = await verifyAuthenticaOtp({
+    phone: normalizedPhone,
+    otp,
+  });
+
+  if (!result.success) {
+    throw new AppError("Invalid OTP", 400);
+  }
+
+  const resetToken = jwt.sign(
+    {
+      phone: normalizedPhone,
+      purpose: "reset-password",
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "15m",
+    }
+  );
+
+  return {
+    success: true,
+    resetToken,
+  };
+},
+
+async resetPassword({ resetToken, password }) {
+  if (!password || password.length < 6) {
+    throw new AppError(
+      "Password must be at least 6 characters",
+      400
+    );
+  }
+
+  let payload;
+
+  try {
+    payload = jwt.verify(
+      resetToken,
+      process.env.JWT_SECRET
+    );
+  } catch {
+    throw new AppError(
+      "Invalid or expired reset token",
+      401
+    );
+  }
+
+  if (payload.purpose !== "reset-password") {
+    throw new AppError("Invalid reset token", 401);
+  }
+
+  const user = await userRepository.findByPhone(
+    payload.phone
+  );
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  await userRepository.updatePassword(
+    user.id,
+    passwordHash
+  );
+
+  await userRepository.deleteAllRefreshTokens(user.id);
+
+  return {
+    success: true,
+    message: "Password reset successfully",
+  };
 },
 
   async refresh(refreshToken) {

@@ -27,6 +27,28 @@ export const authController = {
     res.status(201).json(result);
   },
 
+
+  async requestPasswordResetOtp(req, res) {
+  console.log("forgot-password/request-otp/post");
+
+  const result = await authService.requestPasswordResetOtp(req.body);
+  res.status(200).json(result);
+},
+
+async verifyPasswordResetOtp(req, res) {
+  console.log("forgot-password/verify-otp/post");
+
+  const result = await authService.verifyPasswordResetOtp(req.body);
+  res.status(200).json(result);
+},
+
+async resetPassword(req, res) {
+  console.log("forgot-password/reset/post");
+
+  const result = await authService.resetPassword(req.body);
+  res.status(200).json(result);
+},
+
   async login(req, res) {
     console.log("login/post");
 

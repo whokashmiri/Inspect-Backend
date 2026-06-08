@@ -127,6 +127,24 @@ async create(data) {
   return mapUser(user);
 },
 
+
+async updatePassword(userId, passwordHash) {
+  if (!userId) return null;
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      passwordHash,
+      updatedAt: new Date(),
+    },
+    { new: true }
+  )
+    .populate("company", "name")
+    .lean();
+
+  return mapUser(user);
+},
+
   async findRefreshToken(token) {
     const doc = await RefreshToken.findOne({ token }).lean();
     if (!doc) return null;
