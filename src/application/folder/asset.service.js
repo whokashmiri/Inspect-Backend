@@ -10,13 +10,21 @@ async function getAccessibleProject(projectId, user) {
   const project = await projectRepository.findById(projectId);
   if (!project) throw new AppError("Project not found", 404);
 
-  const projectCompanyId = project.companyId.toString();
-  const userCompanyId =
-    typeof user.company === "object"
-      ? (user.company.id || user.company._id).toString()
-      : user.company.toString();
+  const userId = String(user.id || user._id);
 
-  if (projectCompanyId !== userCompanyId) {
+  const userCompanyId =
+    user.company && typeof user.company === "object"
+      ? user.company.id || user.company._id
+      : user.company;
+
+  const hasCompanyAccess =
+    userCompanyId && String(project.companyId) === String(userCompanyId);
+
+  const hasInspectorAccess = (project.inspectionAssignments || []).some(
+    (assignment) => String(assignment.inspectorUserId) === userId
+  );
+
+  if (!hasCompanyAccess && !hasInspectorAccess) {
     throw new AppError("Forbidden", 403);
   }
 
@@ -116,9 +124,9 @@ export const folderAssetService = {
 
     const user = await userRepository.findById(userId);
     if (!user) throw new AppError("User not found", 404);
-    if (!user.company?.id) {
-      throw new AppError("User is not linked to a company", 400);
-    }
+    // if (!user.company?.id) {
+    //   throw new AppError("User is not linked to a company", 400);
+    // }
 
     await getAccessibleProject(projectId, user);
 
@@ -164,9 +172,9 @@ export const folderAssetService = {
 
     const user = await userRepository.findById(userId);
     if (!user) throw new AppError("User not found", 404);
-    if (!user.company?.id) {
-      throw new AppError("User is not linked to a company", 400);
-    }
+    // if (!user.company?.id) {
+    //   throw new AppError("User is not linked to a company", 400);
+    // }
 
     await getAccessibleProject(projectId, user);
 
@@ -230,9 +238,9 @@ export const folderAssetService = {
   async listContents({ userId, projectId, parentId }) {
     const user = await userRepository.findById(userId);
     if (!user) throw new AppError("User not found", 404);
-    if (!user.company?.id) {
-      throw new AppError("User is not linked to a company", 400);
-    }
+    // if (!user.company?.id) {
+    //   throw new AppError("User is not linked to a company", 400);
+    // }
 
     await getAccessibleProject(projectId, user);
 
@@ -279,9 +287,9 @@ export const folderAssetService = {
   }) {
     const user = await userRepository.findById(userId);
     if (!user) throw new AppError("User not found", 404);
-    if (!user.company?.id) {
-      throw new AppError("User is not linked to a company", 400);
-    }
+    // if (!user.company?.id) {
+    //   throw new AppError("User is not linked to a company", 400);
+    // }
 
     const existingAsset = await assetRepository.findById(assetId);
     if (!existingAsset) {
@@ -412,9 +420,9 @@ voiceNotes: nextVoiceNotes,
 
     const user = await userRepository.findById(userId);
     if (!user) throw new AppError("User not found", 404);
-    if (!user.company?.id) {
-      throw new AppError("User is not linked to a company", 400);
-    }
+    // if (!user.company?.id) {
+    //   throw new AppError("User is not linked to a company", 400);
+    // }
 
     await getAccessibleProject(projectId, user);
 
@@ -435,9 +443,9 @@ voiceNotes: nextVoiceNotes,
     throw new AppError("User not found", 404);
   }
 
-  if (!user.company?.id) {
-    throw new AppError("User is not linked to a company", 400);
-  }
+  // if (!user.company?.id) {
+  //   throw new AppError("User is not linked to a company", 400);
+  // }
 
   const existingAsset = await assetRepository.findById(assetId);
 
