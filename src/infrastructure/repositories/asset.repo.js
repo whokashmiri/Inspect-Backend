@@ -73,15 +73,23 @@ const mapVoiceNote = (note) => ({
 
 const mapAsset = (doc) => ({
   id: toId(doc._id),
+
   name: doc.name,
-  writtenDescription: doc.writtenDescription ?? null,
+
   condition: doc.condition ?? null,
+
   assetType: doc.assetType ?? "other",
+
+  subAssetType: doc.subAssetType ?? null,
+
+  quantity: doc.quantity ?? 1,
+
   brand: doc.brand ?? null,
   model: doc.model ?? null,
   code: doc.code ?? null,
   manufactureYear: doc.manufactureYear ?? null,
   kilometersDriven: doc.kilometersDriven ?? null,
+
   isDone: doc.isDone ?? false,
 
   hasNotes: doc.hasNotes ?? false,
@@ -89,9 +97,12 @@ const mapAsset = (doc) => ({
 
   isPresent: doc.isPresent ?? true,
 
-  rawData: doc.rawData ?? {},
+  rawData: {
+    ...(doc.rawData ?? {}),
+    quantity: doc.quantity ?? doc.rawData?.quantity ?? 1,
+    subAssetType: doc.subAssetType ?? doc.rawData?.subAssetType ?? null,
+  },
 
-  // ✅ NEW STRUCTURE
   parent: toId(doc.parent),
   projectId: toId(doc.projectId),
 
@@ -133,32 +144,72 @@ function advancedValueMatches(value, search) {
   return false;
 }
 
+function normalizeQuantity(value) {
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue) || numberValue < 1) {
+    return 1;
+  }
+
+  return Math.floor(numberValue);
+}
+
+function normalizeSubAssetType(value) {
+  const text = String(value || "").trim();
+  return text || null;
+}
+
+function normalizeNotes(notes) {
+  const notesText = String(notes || "").trim();
+
+  return {
+    notes: notesText || null,
+    hasNotes: notesText.length > 0,
+  };
+}
 
 export const assetRepository = {
-  async create({
-    name,
-    writtenDescription,
-    condition,
-    assetType,
-    brand,
-    model,
-    code,
-    rawData,
-    hasNotes,
-    notes,
-    manufactureYear,
-    kilometersDriven,
-    isDone,
-    isPresent,
-    images,
-    voiceNotes,
-    projectId,
-    parent,
-    createdBy,
-  }) {
+async create({
+  name,
+  condition,
+  assetType,
+  subAssetType,
+  quantity,
+  brand,
+  model,
+  code,
+  rawData,
+  notes,
+  manufactureYear,
+  kilometersDriven,
+  isDone,
+  isPresent,
+  images,
+  voiceNotes,
+  projectId,
+  parent,
+  createdBy,
+}) {
+
+  const incomingRawData =
+  rawData && typeof rawData === "object" && !Array.isArray(rawData)
+    ? rawData
+    : {};
+
+const normalizedQuantity = normalizeQuantity(
+  quantity ?? incomingRawData.quantity
+);
+
+const normalizedSubAssetType =
+  normalizeSubAssetType(subAssetType) ??
+  normalizeSubAssetType(incomingRawData.subAssetType) ??
+  normalizeSubAssetType(incomingRawData.customAssetType) ??
+  (assetType === "vehicle" ? "Vehicle" : null);
+
+const normalizedNotes = normalizeNotes(notes);
     const asset = new Asset({
       name,
-      writtenDescription,
+     
       condition: condition ?? null,
       assetType: assetType || "other",
       brand: brand ?? null,
@@ -166,7 +217,14 @@ export const assetRepository = {
       code: code ?? null,
       manufactureYear: manufactureYear ?? null,
       kilometersDriven: kilometersDriven ?? null,
-      rawData: rawData ?? {},
+      subAssetType: normalizedSubAssetType,
+quantity: normalizedQuantity,
+
+rawData: {
+  ...incomingRawData,
+  quantity: normalizedQuantity,
+  subAssetType: normalizedSubAssetType,
+},
 
       projectId,
       parent: parent || null,
@@ -189,8 +247,8 @@ export const assetRepository = {
         duration: item.duration ?? null,
       })),
 
-      hasNotes: hasNotes ?? false,
-      notes: hasNotes ? notes ?? null : null,
+     hasNotes: normalizedNotes.hasNotes,
+notes: normalizedNotes.notes,
 
       isDone: isDone ?? false,
       isPresent: isPresent ?? true,
@@ -211,21 +269,35 @@ export const assetRepository = {
     return asset ? mapAsset(asset) : null;
   },
 
-  async updateById(assetId, updates) {
-    const asset = await Asset.findById(assetId);
-    if (!asset) return null;
+ async updateById(assetId, updates) {
+  const asset = await Asset.findById(assetId);
+  if (!asset) return null;
 
-    Object.keys(updates).forEach((key) => {
-      if (updates[key] !== undefined) {
-        asset[key] = updates[key];
-      }
-    });
+  if (updates.notes !== undefined) {
+    const normalizedNotes = normalizeNotes(updates.notes);
+    updates.notes = normalizedNotes.notes;
+    updates.hasNotes = normalizedNotes.hasNotes;
+  }
 
-    await asset.save();
-    await asset.populate("createdBy", "fullName email  role");
+  if (updates.quantity !== undefined) {
+    updates.quantity = normalizeQuantity(updates.quantity);
+  }
 
-    return mapAsset(asset.toObject());
-  },
+  if (updates.subAssetType !== undefined) {
+    updates.subAssetType = normalizeSubAssetType(updates.subAssetType);
+  }
+
+  Object.keys(updates).forEach((key) => {
+    if (updates[key] !== undefined) {
+      asset[key] = updates[key];
+    }
+  });
+
+  await asset.save();
+  await asset.populate("createdBy", "fullName email role");
+
+  return mapAsset(asset.toObject());
+},
 
   async findByProjectIdAndCode(projectId, code) {
     const asset = await Asset.findOne({
@@ -380,6 +452,28 @@ async advancedGetRawDataKeys({ userId, projectId }) {
   };
 },
   
+
+async getUniqueSubAssetTypes(projectId) {
+  const values = await Asset.distinct("subAssetType", {
+    projectId,
+    subAssetType: {
+      $exists: true,
+      $nin: [null, ""],
+    },
+  });
+
+  return values
+    .map((value) => String(value).trim())
+    .filter(Boolean)
+    .filter((value, index, array) => {
+      return (
+        array.findIndex(
+          (item) => item.toLowerCase() === value.toLowerCase()
+        ) === index
+      );
+    })
+    .sort((a, b) => a.localeCompare(b));
+},
 
 async deleteById(assetId) {
   const asset = await Asset.findByIdAndDelete(assetId).lean();

@@ -30,7 +30,7 @@ const assetImageSchema = new mongoose.Schema(
     },
   },
   { timestamps: { createdAt: "createdAt", updatedAt: false } }
-);;
+);
 
 const assetVoiceNoteSchema = new mongoose.Schema(
   {
@@ -43,21 +43,16 @@ const assetVoiceNoteSchema = new mongoose.Schema(
 
 const assetSchema = new mongoose.Schema(
   {
-       assetId: {
+    assetId: {
       type: String,
       default: function () {
         return this._id?.toString();
       },
     },
+
     name: {
       type: String,
       required: true,
-      trim: true,
-    },
-
-    writtenDescription: {
-      type: String,
-      default: null,
       trim: true,
     },
 
@@ -67,26 +62,32 @@ const assetSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Main category: Vehicle or Other
     assetType: {
       type: String,
       enum: ["vehicle", "other"],
       default: "other",
       lowercase: true,
       trim: true,
+      index: true,
     },
 
-    brand: {
+    // Sub asset type: Sofa, Chair, TV, etc.
+    subAssetType: {
       type: String,
       default: null,
       trim: true,
+      index: true,
     },
 
-      rawData: {
-      type: mongoose.Schema.Types.Mixed,
-      default: {},
+    quantity: {
+      type: Number,
+      default: 1,
+      min: 1,
     },
 
-    code: {
+    // Vehicle-only fields
+    brand: {
       type: String,
       default: null,
       trim: true,
@@ -104,12 +105,21 @@ const assetSchema = new mongoose.Schema(
       trim: true,
     },
 
-    
-
     kilometersDriven: {
       type: String,
       default: null,
       trim: true,
+    },
+
+    code: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+
+    rawData: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
 
     isPresent: {
@@ -117,7 +127,6 @@ const assetSchema = new mongoose.Schema(
       default: true,
     },
 
-    // old: project
     projectId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
@@ -125,7 +134,6 @@ const assetSchema = new mongoose.Schema(
       index: true,
     },
 
-    // old: folder
     parent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Folder",
@@ -133,7 +141,6 @@ const assetSchema = new mongoose.Schema(
       index: true,
     },
 
-    // added based on new structure
     isAssetFolder: {
       type: Boolean,
       default: true,
@@ -161,27 +168,48 @@ const assetSchema = new mongoose.Schema(
       default: false,
     },
 
-
     hasNotes: {
-  type: Boolean,
-  default: false,
-},
-
-notes: {
-  type: String,
-  default: null,
-  trim: true,
-  validate: {
-    validator: function (value) {
-      if (!this.hasNotes) return true;
-      return typeof value === "string";
+      type: Boolean,
+      default: false,
     },
-    message: "Notes must be provided when hasNotes is true",
-  },
-},
+
+    notes: {
+      type: String,
+      default: null,
+      trim: true,
+    },
   },
   { timestamps: true }
 );
+
+// Always calculate hasNotes from notes
+assetSchema.pre("validate", function (next) {
+  const notesText = typeof this.notes === "string" ? this.notes.trim() : "";
+
+  this.notes = notesText || null;
+  this.hasNotes = notesText.length > 0;
+
+  const quantity = Number(this.quantity);
+
+  if (!Number.isFinite(quantity) || quantity < 1) {
+    this.quantity = 1;
+  } else {
+    this.quantity = Math.floor(quantity);
+  }
+
+  if (this.assetType !== "vehicle") {
+    this.brand = null;
+    this.model = null;
+    this.manufactureYear = null;
+    this.kilometersDriven = null;
+  }
+
+  if (!this.subAssetType || !String(this.subAssetType).trim()) {
+    this.subAssetType = this.assetType === "vehicle" ? "Vehicle" : null;
+  }
+
+  next();
+});
 
 // unique code inside one project only when code exists and is not null/empty
 assetSchema.index(
@@ -189,10 +217,13 @@ assetSchema.index(
   {
     unique: true,
     partialFilterExpression: {
-      code: { $type: "string" },
+      code: { $type: "string", $ne: "" },
     },
   }
 );
+
+// useful later for dropdown values per project
+assetSchema.index({ projectId: 1, subAssetType: 1 });
 
 export const Asset =
   mongoose.models.Asset || mongoose.model("assets", assetSchema);

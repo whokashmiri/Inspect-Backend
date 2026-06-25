@@ -88,16 +88,27 @@ const booleanPreprocess = (value) => {
 };
 
 const uploadedImageSchema = z.object({
-  url: z.string().url("Invalid image URL"),
-  publicId: z.string().min(1, "Image publicId is required"),
+  url: z.string().url("Invalid media URL"),
+
+  publicId: z.string().optional().nullable(),
+
+  mediaType: z
+    .enum(["image", "video"])
+    .optional()
+    .default("image"),
+
+  mimeType: z.string().optional().nullable(),
+
+  duration: z.number().optional().nullable(),
+
+  thumbnailUrl: z.string().url("Invalid thumbnail URL").optional().nullable(),
 });
 
 const uploadedVoiceNoteSchema = z.object({
   url: z.string().url("Invalid voice note URL"),
-  publicId: z.string().min(1, "Voice note publicId is required"),
+  publicId: z.string().optional().nullable(),
   duration: z.number().optional().nullable(),
 });
-
 const jsonPreprocess = (value) => {
   if (value === "" || value === null || value === undefined) return undefined;
 
@@ -119,25 +130,36 @@ const assetTypePreprocess = (value) => {
   return normalized === "vehicle" ? "vehicle" : "other";
 };
 
+
+const numberPreprocess = (value) => {
+  if (value === "" || value === null || value === undefined) return undefined;
+
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) return undefined;
+
+  return numberValue;
+};
+
+const stringTrimPreprocess = (value) => {
+  if (value === "" || value === null || value === undefined) return undefined;
+
+  const text = String(value).trim();
+
+  return text || undefined;
+};
+
 export const createFolderSchema = z.object({
   name: z.string().min(1, "Folder name is required"),
   parentId: optionalOfflineId,
 });
 
 export const createAssetSchema = z.object({
-  name: z.string().min(1, "Asset name is required"),
+  name: z.string().trim().min(1, "Asset name is required"),
 
-  
   parent: optionalOfflineId,
 
   rawData: z.preprocess(jsonPreprocess, z.any().optional()),
-
-  
-
-  writtenDescription: z.preprocess(
-    emptyToUndefined,
-    z.string().optional().nullable()
-  ),
 
   condition: z.preprocess(
     emptyToUndefined,
@@ -148,7 +170,16 @@ export const createAssetSchema = z.object({
     assetTypePreprocess,
     z.enum(["vehicle", "other"]).optional()
   ),
-  
+
+  subAssetType: z.preprocess(
+    stringTrimPreprocess,
+    z.string().optional().nullable()
+  ),
+
+  quantity: z.preprocess(
+    numberPreprocess,
+    z.number().int().min(1).optional().nullable()
+  ),
 
   brand: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
   model: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
@@ -159,15 +190,10 @@ export const createAssetSchema = z.object({
     z.boolean().optional().nullable()
   ),
 
-  hasNotes: z.preprocess(
-  booleanPreprocess,
-  z.boolean().optional().nullable()
-),
-
-notes: z.preprocess(
-  emptyToUndefined,
-  z.string().optional().nullable()
-),
+  notes: z.preprocess(
+    emptyToUndefined,
+    z.string().optional().nullable()
+  ),
 
   isPresent: z.preprocess(
     booleanPreprocess,
@@ -179,19 +205,19 @@ notes: z.preprocess(
     z.string().optional().nullable()
   ),
 
-  images: z.preprocess(
-  jsonPreprocess,
-  z.array(uploadedImageSchema).optional().default([])
-),
-
-voiceNotes: z.preprocess(
-  jsonPreprocess,
-  z.array(uploadedVoiceNoteSchema).optional().default([])
-),
-
   kilometersDriven: z.preprocess(
     emptyToUndefined,
     z.string().optional().nullable()
+  ),
+
+  images: z.preprocess(
+    jsonPreprocess,
+    z.array(uploadedImageSchema).optional().default([])
+  ),
+
+  voiceNotes: z.preprocess(
+    jsonPreprocess,
+    z.array(uploadedVoiceNoteSchema).optional().default([])
   ),
 });
 
@@ -199,20 +225,6 @@ export const updateAssetSchema = z.object({
   name: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
 
   rawData: z.preprocess(jsonPreprocess, z.any().optional()),
-  images: z.preprocess(
-  jsonPreprocess,
-  z.array(uploadedImageSchema).optional().default([])
-),
-
-voiceNotes: z.preprocess(
-  jsonPreprocess,
-  z.array(uploadedVoiceNoteSchema).optional().default([])
-),
-
-  writtenDescription: z.preprocess(
-    emptyToUndefined,
-    z.string().optional().nullable()
-  ),
 
   condition: z.preprocess(
     emptyToUndefined,
@@ -224,6 +236,16 @@ voiceNotes: z.preprocess(
     z.enum(["vehicle", "other"]).optional()
   ),
 
+  subAssetType: z.preprocess(
+    stringTrimPreprocess,
+    z.string().optional().nullable()
+  ),
+
+  quantity: z.preprocess(
+    numberPreprocess,
+    z.number().int().min(1).optional().nullable()
+  ),
+
   brand: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
   model: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
   code: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
@@ -233,15 +255,10 @@ voiceNotes: z.preprocess(
     z.boolean().optional().nullable()
   ),
 
-hasNotes: z.preprocess(
-  booleanPreprocess,
-  z.boolean().optional().nullable()
-),
-
-notes: z.preprocess(
-  emptyToUndefined,
-  z.string().optional().nullable()
-),
+  notes: z.preprocess(
+    emptyToUndefined,
+    z.string().optional().nullable()
+  ),
 
   isPresent: z.preprocess(
     booleanPreprocess,
@@ -256,5 +273,15 @@ notes: z.preprocess(
   kilometersDriven: z.preprocess(
     emptyToUndefined,
     z.string().optional().nullable()
+  ),
+
+  images: z.preprocess(
+    jsonPreprocess,
+    z.array(uploadedImageSchema).optional().default([])
+  ),
+
+  voiceNotes: z.preprocess(
+    jsonPreprocess,
+    z.array(uploadedVoiceNoteSchema).optional().default([])
   ),
 });

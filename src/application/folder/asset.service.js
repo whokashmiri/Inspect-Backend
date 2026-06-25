@@ -46,6 +46,34 @@ function normalizeCondition(condition) {
   return ["New", "Used", "Damaged", "Good"].includes(value) ? value : null;
 }
 
+
+function normalizeQuantity(value) {
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue) || numberValue < 1) {
+    return 1;
+  }
+
+  return Math.floor(numberValue);
+}
+
+function normalizeSubAssetType(value) {
+  if (value === undefined) return undefined;
+
+  const text = String(value || "").trim();
+
+  return text || null;
+}
+
+function normalizeNotes(notes) {
+  const notesText = String(notes || "").trim();
+
+  return {
+    notes: notesText || null,
+    hasNotes: notesText.length > 0,
+  };
+}
+
 function normalizeOptionalString(value) {
   if (value === undefined) return undefined;
   return value?.trim() || null;
@@ -147,27 +175,28 @@ export const folderAssetService = {
     return { folder };
   },
 
-  async createAsset({
-    userId,
-    projectId,
-    parent,
-    folderId, 
-    name,
-    writtenDescription,
-    condition,
-    assetType,
-    brand,
-    model,
-    isPresent,
-    code,
-    manufactureYear,
-    kilometersDriven,
-    isDone,
-    hasNotes,
-    notes,
-    images,
-    voiceNotes,
-  }) {
+ async createAsset({
+  userId,
+  projectId,
+  parent,
+  folderId,
+  name,
+  condition,
+  assetType,
+  subAssetType,
+  quantity,
+  rawData,
+  brand,
+  model,
+  isPresent,
+  code,
+  manufactureYear,
+  kilometersDriven,
+  isDone,
+  notes,
+  images,
+  voiceNotes,
+}) {
     if (!name?.trim()) throw new AppError("Asset name is required", 400);
 
     const user = await userRepository.findById(userId);
@@ -190,8 +219,22 @@ export const folderAssetService = {
     const normalizedAssetType = normalizeAssetType(assetType);
     const normalizedCondition = normalizeCondition(condition);
     const normalizedCode = normalizeOptionalString(code);
-    const normalizedWrittenDescription = normalizeOptionalString(writtenDescription);
+const incomingRawData =
+  rawData && typeof rawData === "object" && !Array.isArray(rawData)
+    ? rawData
+    : {};
 
+const normalizedQuantity = normalizeQuantity(
+  quantity ?? incomingRawData.quantity
+);
+
+const normalizedSubAssetType =
+  normalizeSubAssetType(subAssetType) ??
+  normalizeSubAssetType(incomingRawData.subAssetType) ??
+  normalizeSubAssetType(incomingRawData.customAssetType) ??
+  (normalizedAssetType === "vehicle" ? "Vehicle" : null);
+
+const normalizedNotes = normalizeNotes(notes);
     const normalizedBrand = normalizeVehicleOnlyField(normalizedAssetType, brand);
     const normalizedModel = normalizeVehicleOnlyField(normalizedAssetType, model);
     const normalizedManufactureYear = normalizeVehicleOnlyField(
@@ -207,28 +250,40 @@ export const folderAssetService = {
 
 
     
-    const asset = await assetRepository.create({
-      
-      name: name.trim(),
-      writtenDescription: normalizedWrittenDescription,
-      condition: normalizedCondition,
-      assetType: normalizedAssetType,
-      brand: normalizedBrand,
-      model: normalizedModel,
-      code: normalizedCode,
-      manufactureYear: normalizedManufactureYear,
-      kilometersDriven: normalizedKilometersDriven,
-      isDone: isDone !== undefined ? isDone : false,
-      isPresent: isPresent !== undefined ? isPresent : true,
-      images: sanitizeImages(images),
-      voiceNotes: sanitizeVoiceNotes(voiceNotes),
-      projectId,
-      parent: resolvedParentSubProjectId,
-      hasNotes: hasNotes !== undefined ? hasNotes : false,
-      notes: hasNotes ? normalizeOptionalString(notes) : null,
-      isAssetFolder: true,
-      createdBy: user.id,
-    });
+   const asset = await assetRepository.create({
+  name: name.trim(),
+  condition: normalizedCondition,
+  assetType: normalizedAssetType,
+
+  subAssetType: normalizedSubAssetType,
+  quantity: normalizedQuantity,
+  rawData: {
+    ...incomingRawData,
+    quantity: normalizedQuantity,
+    subAssetType: normalizedSubAssetType,
+  },
+
+  brand: normalizedBrand,
+  model: normalizedModel,
+  code: normalizedCode,
+  manufactureYear: normalizedManufactureYear,
+  kilometersDriven: normalizedKilometersDriven,
+
+  isDone: isDone !== undefined ? isDone : false,
+  isPresent: isPresent !== undefined ? isPresent : true,
+
+  images: sanitizeImages(images),
+  voiceNotes: sanitizeVoiceNotes(voiceNotes),
+
+  projectId,
+  parent: resolvedParentSubProjectId,
+
+  hasNotes: normalizedNotes.hasNotes,
+  notes: normalizedNotes.notes,
+
+  isAssetFolder: true,
+  createdBy: user.id,
+});
 
     await touchProject(projectId);
 
@@ -266,25 +321,25 @@ export const folderAssetService = {
     };
   },
 
-  async updateAsset({
-    userId,
-    assetId,
-    name,
-    writtenDescription,
-    condition,
-    assetType,
-    brand,
-    model,
-    code,
-    manufactureYear,
-    kilometersDriven,
-    isPresent,
-    isDone,
-    hasNotes,
-    notes,
-    images,
-    voiceNotes,
-  }) {
+async updateAsset({
+  userId,
+  assetId,
+  name,
+  writtenDescription,
+  condition,
+  assetType,
+  brand,
+  model,
+  code,
+  manufactureYear,
+  kilometersDriven,
+  isPresent,
+  isDone,
+  hasNotes,
+  notes,
+  images,
+  voiceNotes,
+}) {
     const user = await userRepository.findById(userId);
     if (!user) throw new AppError("User not found", 404);
     // if (!user.company?.id) {
@@ -311,6 +366,34 @@ const isCreator = assetCreatorId === currentUserId;
     const normalizedCondition = normalizeCondition(condition);
     const normalizedCode = normalizeOptionalString(code);
 
+    const incomingRawData =
+  rawData && typeof rawData === "object" && !Array.isArray(rawData)
+    ? rawData
+    : existingAsset.rawData || {};
+
+const nextQuantity =
+  quantity === undefined && incomingRawData.quantity === undefined
+    ? existingAsset.quantity || 1
+    : normalizeQuantity(quantity ?? incomingRawData.quantity);
+
+const nextSubAssetType =
+  subAssetType === undefined &&
+  incomingRawData.subAssetType === undefined &&
+  incomingRawData.customAssetType === undefined
+    ? existingAsset.subAssetType
+    : normalizeSubAssetType(subAssetType) ??
+      normalizeSubAssetType(incomingRawData.subAssetType) ??
+      normalizeSubAssetType(incomingRawData.customAssetType) ??
+      (nextAssetType === "vehicle" ? "Vehicle" : null);
+
+const normalizedNotes =
+  notes === undefined
+    ? {
+        notes: existingAsset.notes,
+        hasNotes: !!existingAsset.notes?.trim?.(),
+      }
+    : normalizeNotes(notes);
+
   
 const existingImages = sanitizeImages(existingAsset.images || []);
 const incomingImages = sanitizeImages(images || []);
@@ -336,10 +419,7 @@ const nextVoiceNotes = [
     ? existingAsset.name
     : name?.trim() || existingAsset.name,
 
-      writtenDescription:
-        writtenDescription === undefined
-          ? existingAsset.writtenDescription
-          : writtenDescription?.trim() || null,
+     
 
       condition:
         condition === undefined
@@ -350,6 +430,16 @@ const nextVoiceNotes = [
         assetType === undefined
           ? existingAsset.assetType
           : nextAssetType,
+
+          subAssetType: nextSubAssetType,
+
+quantity: nextQuantity,
+
+rawData: {
+  ...incomingRawData,
+  quantity: nextQuantity,
+  subAssetType: nextSubAssetType,
+},
 
       brand:
         brand === undefined
@@ -384,17 +474,8 @@ const nextVoiceNotes = [
           ? kilometersDriven?.trim() || null
           : null,
 
-          hasNotes:
-  hasNotes === undefined
-    ? existingAsset.hasNotes
-    : hasNotes,
-
-notes:
-  hasNotes === false
-    ? null
-    : notes === undefined
-    ? existingAsset.notes
-    : normalizeOptionalString(notes),
+ hasNotes: normalizedNotes.hasNotes,
+notes: normalizedNotes.notes,
 
       isDone:
         isDone === undefined
