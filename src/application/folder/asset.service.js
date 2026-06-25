@@ -60,9 +60,24 @@ function normalizeQuantity(value) {
 function normalizeSubAssetType(value) {
   if (value === undefined) return undefined;
 
-  const text = String(value || "").trim();
+  const text = String(value || "")
+    .trim()
+    .toLowerCase();
 
   return text || null;
+}
+
+function cleanRawData(rawData) {
+  const cleaned =
+    rawData && typeof rawData === "object" && !Array.isArray(rawData)
+      ? { ...rawData }
+      : {};
+
+  delete cleaned.quantity;
+  delete cleaned.subAssetType;
+  delete cleaned.customAssetType;
+
+  return cleaned;
 }
 
 function normalizeNotes(notes) {
@@ -224,15 +239,11 @@ const incomingRawData =
     ? rawData
     : {};
 
-const normalizedQuantity = normalizeQuantity(
-  quantity ?? incomingRawData.quantity
-);
+const normalizedQuantity = normalizeQuantity(quantity);
 
 const normalizedSubAssetType =
   normalizeSubAssetType(subAssetType) ??
-  normalizeSubAssetType(incomingRawData.subAssetType) ??
-  normalizeSubAssetType(incomingRawData.customAssetType) ??
-  (normalizedAssetType === "vehicle" ? "Vehicle" : null);
+  (normalizedAssetType === "vehicle" ? "vehicle" : null);
 
 const normalizedNotes = normalizeNotes(notes);
     const normalizedBrand = normalizeVehicleOnlyField(normalizedAssetType, brand);
@@ -247,6 +258,7 @@ const normalizedNotes = normalizeNotes(notes);
     );
 
   
+const finalRawData = cleanRawData(incomingRawData);
 
 
     
@@ -257,11 +269,7 @@ const normalizedNotes = normalizeNotes(notes);
 
   subAssetType: normalizedSubAssetType,
   quantity: normalizedQuantity,
-  rawData: {
-    ...incomingRawData,
-    quantity: normalizedQuantity,
-    subAssetType: normalizedSubAssetType,
-  },
+  rawData: finalRawData,
 
   brand: normalizedBrand,
   model: normalizedModel,
@@ -325,9 +333,11 @@ async updateAsset({
   userId,
   assetId,
   name,
-  writtenDescription,
   condition,
   assetType,
+  subAssetType,
+  quantity,
+  rawData,
   brand,
   model,
   code,
@@ -335,7 +345,6 @@ async updateAsset({
   kilometersDriven,
   isPresent,
   isDone,
-  hasNotes,
   notes,
   images,
   voiceNotes,
@@ -371,20 +380,18 @@ const isCreator = assetCreatorId === currentUserId;
     ? rawData
     : existingAsset.rawData || {};
 
+const cleanedIncomingRawData = cleanRawData(incomingRawData);
+
 const nextQuantity =
-  quantity === undefined && incomingRawData.quantity === undefined
+  quantity === undefined
     ? existingAsset.quantity || 1
-    : normalizeQuantity(quantity ?? incomingRawData.quantity);
+    : normalizeQuantity(quantity);
 
 const nextSubAssetType =
-  subAssetType === undefined &&
-  incomingRawData.subAssetType === undefined &&
-  incomingRawData.customAssetType === undefined
-    ? existingAsset.subAssetType
+  subAssetType === undefined
+    ? normalizeSubAssetType(existingAsset.subAssetType)
     : normalizeSubAssetType(subAssetType) ??
-      normalizeSubAssetType(incomingRawData.subAssetType) ??
-      normalizeSubAssetType(incomingRawData.customAssetType) ??
-      (nextAssetType === "vehicle" ? "Vehicle" : null);
+      (nextAssetType === "vehicle" ? "vehicle" : null);
 
 const normalizedNotes =
   notes === undefined
@@ -411,85 +418,79 @@ const nextVoiceNotes = [
   ...sanitizeVoiceNotes(voiceNotes),
 ];
 
-    const updatedAsset = await assetRepository.updateById(assetId, {
-     name:
-  !isCreator
-    ? existingAsset.name
-    : name === undefined
-    ? existingAsset.name
-    : name?.trim() || existingAsset.name,
+const nextRawData = cleanedIncomingRawData;
 
-     
+const updatedAsset = await assetRepository.updateById(assetId, {
+  name:
+    !isCreator
+      ? existingAsset.name
+      : name === undefined
+      ? existingAsset.name
+      : name?.trim() || existingAsset.name,
 
-      condition:
-        condition === undefined
-          ? existingAsset.condition
-          : normalizedCondition,
+  condition:
+    condition === undefined
+      ? existingAsset.condition
+      : normalizedCondition,
 
-      assetType:
-        assetType === undefined
-          ? existingAsset.assetType
-          : nextAssetType,
+  assetType:
+    assetType === undefined
+      ? existingAsset.assetType
+      : nextAssetType,
 
-          subAssetType: nextSubAssetType,
-
-quantity: nextQuantity,
-
-rawData: {
-  ...incomingRawData,
-  quantity: nextQuantity,
   subAssetType: nextSubAssetType,
-},
+  quantity: nextQuantity,
+  rawData: nextRawData,
 
-      brand:
-        brand === undefined
-          ? existingAsset.brand
-          : nextAssetType === "vehicle"
-          ? brand?.trim() || null
-          : null,
+  brand:
+    brand === undefined
+      ? existingAsset.brand
+      : nextAssetType === "vehicle"
+      ? brand?.trim() || null
+      : null,
 
-      model:
-        model === undefined
-          ? existingAsset.model
-          : nextAssetType === "vehicle"
-          ? model?.trim() || null
-          : null,
+  model:
+    model === undefined
+      ? existingAsset.model
+      : nextAssetType === "vehicle"
+      ? model?.trim() || null
+      : null,
 
-      code:
-        code === undefined
-          ? existingAsset.code
-          : normalizedCode,
+  code:
+    code === undefined
+      ? existingAsset.code
+      : normalizedCode,
 
-      manufactureYear:
-        manufactureYear === undefined
-          ? existingAsset.manufactureYear
-          : nextAssetType === "vehicle"
-          ? manufactureYear?.trim() || null
-          : null,
+  manufactureYear:
+    manufactureYear === undefined
+      ? existingAsset.manufactureYear
+      : nextAssetType === "vehicle"
+      ? manufactureYear?.trim() || null
+      : null,
 
-      kilometersDriven:
-        kilometersDriven === undefined
-          ? existingAsset.kilometersDriven
-          : nextAssetType === "vehicle"
-          ? kilometersDriven?.trim() || null
-          : null,
+  kilometersDriven:
+    kilometersDriven === undefined
+      ? existingAsset.kilometersDriven
+      : nextAssetType === "vehicle"
+      ? kilometersDriven?.trim() || null
+      : null,
 
- hasNotes: normalizedNotes.hasNotes,
-notes: normalizedNotes.notes,
+  hasNotes: normalizedNotes.hasNotes,
+  notes: normalizedNotes.notes,
 
-      isDone:
-        isDone === undefined
-          ? existingAsset.isDone
-          : isDone,
+  isDone:
+    isDone === undefined
+      ? existingAsset.isDone
+      : isDone,
 
-      isPresent:
-        isPresent === undefined
-          ? existingAsset.isPresent
-          : isPresent,
+  isPresent:
+    isPresent === undefined
+      ? existingAsset.isPresent
+      : isPresent,
 
-      images: nextImages,
-voiceNotes: nextVoiceNotes,
-    });
+  images: nextImages,
+  voiceNotes: nextVoiceNotes,
+});
 
     await touchProject(existingAsset.projectId);
 
@@ -590,5 +591,18 @@ async advancedGetRawDataKeyValues({ userId, projectId, key }) {
     projectId,
     key,
   });
+},
+
+async getProjectSubAssetTypes({ userId, projectId }) {
+  const user = await userRepository.findById(userId);
+  if (!user) throw new AppError("User not found", 404);
+
+  await getAccessibleProject(projectId, user);
+
+  const subAssetTypes = await assetRepository.getUniqueSubAssetTypes(projectId);
+
+  return {
+    subAssetTypes,
+  };
 }
 };

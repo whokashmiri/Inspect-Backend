@@ -54,6 +54,20 @@ const parseRawData = (value) => {
   return {};
 };
 
+
+const cleanRawData = (rawData) => {
+  const cleaned =
+    rawData && typeof rawData === "object" && !Array.isArray(rawData)
+      ? { ...rawData }
+      : {};
+
+  delete cleaned.quantity;
+  delete cleaned.subAssetType;
+  delete cleaned.customAssetType;
+
+  return cleaned;
+};
+
 const normalizeOptionalText = (value, fallback = undefined) => {
   if (value === undefined || value === null) return fallback;
 
@@ -75,7 +89,7 @@ export const folderAssetController = {
   },
 
  async createAsset(req, res) {
-  const rawData = parseRawData(req.body.rawData);
+  const rawData = cleanRawData(parseRawData(req.body.rawData));
 
   const result = await folderAssetService.createAsset({
     userId: req.userId,
@@ -93,17 +107,9 @@ export const folderAssetController = {
 
     assetType: normalizeAssetType(req.body.assetType, "other"),
 
-    subAssetType: normalizeOptionalText(
-      req.body.subAssetType ??
-        rawData.subAssetType ??
-        rawData.customAssetType,
-      undefined
-    ),
+   subAssetType: normalizeOptionalText(req.body.subAssetType, undefined),
 
-    quantity: parseQuantity(
-      req.body.quantity ?? rawData.quantity,
-      undefined
-    ),
+quantity: parseQuantity(req.body.quantity, undefined),
 
     rawData,
 
@@ -125,7 +131,9 @@ export const folderAssetController = {
 },
 async updateAsset(req, res) {
   const rawData =
-    req.body.rawData === undefined ? undefined : parseRawData(req.body.rawData);
+  req.body.rawData === undefined
+    ? undefined
+    : cleanRawData(parseRawData(req.body.rawData));
 
   const result = await folderAssetService.updateAsset({
     userId: req.userId,
@@ -144,21 +152,14 @@ async updateAsset(req, res) {
         : normalizeAssetType(req.body.assetType),
 
     subAssetType:
-      req.body.subAssetType === undefined &&
-      rawData?.subAssetType === undefined &&
-      rawData?.customAssetType === undefined
-        ? undefined
-        : normalizeOptionalText(
-            req.body.subAssetType ??
-              rawData?.subAssetType ??
-              rawData?.customAssetType,
-            undefined
-          ),
+  req.body.subAssetType === undefined
+    ? undefined
+    : normalizeOptionalText(req.body.subAssetType, null),
 
-    quantity:
-      req.body.quantity === undefined && rawData?.quantity === undefined
-        ? undefined
-        : parseQuantity(req.body.quantity ?? rawData?.quantity, undefined),
+quantity:
+  req.body.quantity === undefined
+    ? undefined
+    : parseQuantity(req.body.quantity, undefined),
 
     rawData,
 

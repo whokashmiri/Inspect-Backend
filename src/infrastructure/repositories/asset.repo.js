@@ -97,11 +97,7 @@ const mapAsset = (doc) => ({
 
   isPresent: doc.isPresent ?? true,
 
-  rawData: {
-    ...(doc.rawData ?? {}),
-    quantity: doc.quantity ?? doc.rawData?.quantity ?? 1,
-    subAssetType: doc.subAssetType ?? doc.rawData?.subAssetType ?? null,
-  },
+  rawData: cleanRawData(doc.rawData ?? {}),
 
   parent: toId(doc.parent),
   projectId: toId(doc.projectId),
@@ -155,8 +151,26 @@ function normalizeQuantity(value) {
 }
 
 function normalizeSubAssetType(value) {
-  const text = String(value || "").trim();
+  if (value === undefined) return undefined;
+
+  const text = String(value || "")
+    .trim()
+    .toLowerCase();
+
   return text || null;
+}
+
+function cleanRawData(rawData) {
+  const cleaned =
+    rawData && typeof rawData === "object" && !Array.isArray(rawData)
+      ? { ...rawData }
+      : {};
+
+  delete cleaned.quantity;
+  delete cleaned.subAssetType;
+  delete cleaned.customAssetType;
+
+  return cleaned;
 }
 
 function normalizeNotes(notes) {
@@ -191,20 +205,18 @@ async create({
   createdBy,
 }) {
 
-  const incomingRawData =
+const incomingRawData =
   rawData && typeof rawData === "object" && !Array.isArray(rawData)
     ? rawData
     : {};
 
-const normalizedQuantity = normalizeQuantity(
-  quantity ?? incomingRawData.quantity
-);
+const normalizedQuantity = normalizeQuantity(quantity);
 
 const normalizedSubAssetType =
   normalizeSubAssetType(subAssetType) ??
-  normalizeSubAssetType(incomingRawData.subAssetType) ??
-  normalizeSubAssetType(incomingRawData.customAssetType) ??
-  (assetType === "vehicle" ? "Vehicle" : null);
+  (assetType === "vehicle" ? "vehicle" : null);
+
+const finalRawData = cleanRawData(incomingRawData);
 
 const normalizedNotes = normalizeNotes(notes);
     const asset = new Asset({
@@ -218,13 +230,9 @@ const normalizedNotes = normalizeNotes(notes);
       manufactureYear: manufactureYear ?? null,
       kilometersDriven: kilometersDriven ?? null,
       subAssetType: normalizedSubAssetType,
-quantity: normalizedQuantity,
+      quantity: normalizedQuantity,
 
-rawData: {
-  ...incomingRawData,
-  quantity: normalizedQuantity,
-  subAssetType: normalizedSubAssetType,
-},
+      rawData: finalRawData,
 
       projectId,
       parent: parent || null,
@@ -256,20 +264,19 @@ notes: normalizedNotes.notes,
     });
 
     await asset.save();
-    await asset.populate("createdBy", "fullName email ,role");
+    await asset.populate("createdBy", "fullName email role");
 
     return mapAsset(asset.toObject());
   },
 
   async findById(assetId) {
     const asset = await Asset.findById(assetId)
-      .populate("createdBy", "fullName email  role")
+      .populate("createdBy", "fullName email role")
       .lean();
 
     return asset ? mapAsset(asset) : null;
   },
-
- async updateById(assetId, updates) {
+async updateById(assetId, updates) {
   const asset = await Asset.findById(assetId);
   if (!asset) return null;
 
@@ -285,6 +292,10 @@ notes: normalizedNotes.notes,
 
   if (updates.subAssetType !== undefined) {
     updates.subAssetType = normalizeSubAssetType(updates.subAssetType);
+  }
+
+  if (updates.rawData !== undefined) {
+    updates.rawData = cleanRawData(updates.rawData);
   }
 
   Object.keys(updates).forEach((key) => {
@@ -343,7 +354,6 @@ notes: normalizedNotes.notes,
 async advancedGetRawDataKeyValues({ userId, projectId, key }) {
   const assets = await Asset.find({
     projectId,
-   
   })
     .select("rawData")
     .lean();
@@ -351,7 +361,8 @@ async advancedGetRawDataKeyValues({ userId, projectId, key }) {
   const values = new Set();
 
   for (const asset of assets) {
-    const value = getNestedValue(asset.rawData, key);
+    const cleanedRawData = cleanRawData(asset.rawData);
+    const value = getNestedValue(cleanedRawData, key);
 
     if (value === null || value === undefined) continue;
 
@@ -368,7 +379,6 @@ async advancedGetRawDataKeyValues({ userId, projectId, key }) {
     values: Array.from(values).sort(),
   };
 },
-
 async advancedSearchContents({
   userId,
   projectId,
@@ -402,7 +412,7 @@ async advancedSearchContents({
   const matchesSelectedFilters =
     !hasFilters ||
     filters.every(({ key, value }) => {
-      const rawValue = getNestedValue(asset.rawData, key);
+      const rawValue = getNestedValue(cleanRawData(asset.rawData), key);
 
       if (rawValue === null || rawValue === undefined) return false;
 
@@ -415,7 +425,7 @@ async advancedSearchContents({
   const matchesSearch =
     !cleanSearch ||
     advancedValueMatches(asset.name, cleanSearch) ||
-    advancedValueMatches(asset.rawData, cleanSearch);
+    advancedValueMatches(cleanRawData(asset.rawData), cleanSearch);
 
   return matchesSelectedFilters && matchesSearch;
 });
@@ -444,14 +454,13 @@ async advancedGetRawDataKeys({ userId, projectId }) {
   const keys = new Set();
 
   for (const asset of assets) {
-    extractRawDataKeys(asset.rawData, "", keys);
+    extractRawDataKeys(cleanRawData(asset.rawData), "", keys);
   }
 
   return {
     keys: Array.from(keys).sort(),
   };
 },
-  
 
 async getUniqueSubAssetTypes(projectId) {
   const values = await Asset.distinct("subAssetType", {
@@ -462,19 +471,18 @@ async getUniqueSubAssetTypes(projectId) {
     },
   });
 
-  return values
-    .map((value) => String(value).trim())
-    .filter(Boolean)
-    .filter((value, index, array) => {
-      return (
-        array.findIndex(
-          (item) => item.toLowerCase() === value.toLowerCase()
-        ) === index
-      );
-    })
-    .sort((a, b) => a.localeCompare(b));
-},
+  const unique = new Set();
 
+  values.forEach((value) => {
+    const normalized = normalizeSubAssetType(value);
+
+    if (normalized) {
+      unique.add(normalized);
+    }
+  });
+
+  return Array.from(unique).sort((a, b) => a.localeCompare(b));
+},
 async deleteById(assetId) {
   const asset = await Asset.findByIdAndDelete(assetId).lean();
   return asset ? mapAsset(asset) : null;

@@ -56,6 +56,12 @@ router.post(
 );
 
 router.get(
+  "/:projectId/assets/sub-asset-types",
+  authenticate,
+  asyncWrap(folderAssetController.getProjectSubAssetTypes)
+);
+
+router.get(
   "/:projectId/assets/by-code",
   authenticate,
   asyncWrap(folderAssetController.getAssetByCode)
