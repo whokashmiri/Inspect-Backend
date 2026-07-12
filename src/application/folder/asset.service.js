@@ -43,7 +43,7 @@ function normalizeCondition(condition) {
   if (condition === null) return null;
 
   const value = String(condition).trim();
-  return ["New", "Used", "Damaged", "Good"].includes(value) ? value : null;
+  return value || null;
 }
 
 
@@ -603,6 +603,57 @@ async getProjectSubAssetTypes({ userId, projectId }) {
 
   return {
     subAssetTypes,
+  };
+},
+
+async getProjectConditions({ userId, projectId }) {
+  const user = await userRepository.findById(userId);
+  if (!user) throw new AppError("User not found", 404);
+
+  await getAccessibleProject(projectId, user);
+
+  const conditions = await assetRepository.getUniqueConditions(projectId);
+
+  return {
+    conditions,
+  };
+},
+
+async renameProjectSubAssetType({
+  userId,
+  projectId,
+  oldSubAssetType,
+  newSubAssetType,
+  parent,
+}) {
+  const user = await userRepository.findById(userId);
+  if (!user) throw new AppError("User not found", 404);
+
+  await getAccessibleProject(projectId, user);
+
+  const oldValue = String(oldSubAssetType || "").trim().toLowerCase();
+  const newValue = String(newSubAssetType || "").trim().toLowerCase();
+
+  if (!oldValue) {
+    throw new AppError("Old sub asset type is required", 400);
+  }
+
+  if (!newValue) {
+    throw new AppError("New sub asset type is required", 400);
+  }
+
+  const result = await assetRepository.renameSubAssetType({
+    projectId,
+    oldSubAssetType: oldValue,
+    newSubAssetType: newValue,
+    parent,
+  });
+
+  await touchProject(projectId);
+
+  return {
+    success: true,
+    ...result,
   };
 }
 };
