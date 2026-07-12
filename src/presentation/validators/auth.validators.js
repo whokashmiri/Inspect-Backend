@@ -149,9 +149,32 @@ const stringTrimPreprocess = (value) => {
   return text || undefined;
 };
 
+const nullableStringTrimPreprocess = (value) => {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+
+  const text = String(value).trim();
+
+  return text || null;
+};
+
 export const createFolderSchema = z.object({
   name: z.string().min(1, "Folder name is required"),
   parentId: optionalOfflineId,
+});
+
+export const renameSubAssetTypeSchema = z.object({
+  oldSubAssetType: z.preprocess(
+    stringTrimPreprocess,
+    z.string().min(1, "Old sub asset type is required").max(80)
+  ),
+
+  newSubAssetType: z.preprocess(
+    stringTrimPreprocess,
+    z.string().min(1, "New sub asset type is required").max(80)
+  ),
+
+  parent: optionalOfflineId,
 });
 
 export const createAssetSchema = z.object({
@@ -161,20 +184,20 @@ export const createAssetSchema = z.object({
 
   rawData: z.preprocess(jsonPreprocess, z.any().optional()),
 
-  condition: z.preprocess(
-    emptyToUndefined,
-    z.enum(["New", "Used", "Damaged", "Good"]).optional().nullable()
-  ),
+condition: z.preprocess(
+  nullableStringTrimPreprocess,
+  z.string().max(80, "Condition is too long").optional().nullable()
+),
 
   assetType: z.preprocess(
     assetTypePreprocess,
     z.enum(["vehicle", "other"]).optional()
   ),
 
-  subAssetType: z.preprocess(
-    stringTrimPreprocess,
-    z.string().optional().nullable()
-  ),
+ subAssetType: z.preprocess(
+  nullableStringTrimPreprocess,
+  z.string().max(80, "Sub asset type is too long").optional().nullable()
+),
 
   quantity: z.preprocess(
     numberPreprocess,
@@ -226,20 +249,20 @@ export const updateAssetSchema = z.object({
 
   rawData: z.preprocess(jsonPreprocess, z.any().optional()),
 
-  condition: z.preprocess(
-    emptyToUndefined,
-    z.enum(["New", "Used", "Damaged", "Good"]).optional().nullable()
-  ),
+ condition: z.preprocess(
+  nullableStringTrimPreprocess,
+  z.string().max(80, "Condition is too long").optional().nullable()
+),
 
   assetType: z.preprocess(
     assetTypePreprocess,
     z.enum(["vehicle", "other"]).optional()
   ),
 
-  subAssetType: z.preprocess(
-    stringTrimPreprocess,
-    z.string().optional().nullable()
-  ),
+subAssetType: z.preprocess(
+  nullableStringTrimPreprocess,
+  z.string().max(80, "Sub asset type is too long").optional().nullable()
+),
 
   quantity: z.preprocess(
     numberPreprocess,
