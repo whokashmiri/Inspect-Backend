@@ -160,6 +160,14 @@ function normalizeSubAssetType(value) {
   return text || null;
 }
 
+function normalizeCondition(value) {
+  if (value === undefined) return undefined;
+
+  const text = String(value || "").trim();
+
+  return text || null;
+}
+
 function cleanRawData(rawData) {
   const cleaned =
     rawData && typeof rawData === "object" && !Array.isArray(rawData)
@@ -222,7 +230,7 @@ const normalizedNotes = normalizeNotes(notes);
     const asset = new Asset({
       name,
      
-      condition: condition ?? null,
+      condition: normalizeCondition(condition) ?? "Good",
       assetType: assetType || "other",
       brand: brand ?? null,
       model: model ?? null,
@@ -289,6 +297,10 @@ async updateById(assetId, updates) {
   if (updates.quantity !== undefined) {
     updates.quantity = normalizeQuantity(updates.quantity);
   }
+
+  if (updates.condition !== undefined) {
+  updates.condition = normalizeCondition(updates.condition);
+}
 
   if (updates.subAssetType !== undefined) {
     updates.subAssetType = normalizeSubAssetType(updates.subAssetType);
@@ -462,26 +474,37 @@ async advancedGetRawDataKeys({ userId, projectId }) {
   };
 },
 
-async getUniqueSubAssetTypes(projectId) {
-  const values = await Asset.distinct("subAssetType", {
+async getUniqueSubAssetTypes(projectId, options = {}) {
+  const rows = await Asset.getUniqueSubAssetTypesByProject(projectId, options);
+
+  return rows.map((item) => item.value);
+},
+
+
+
+
+async getUniqueConditions(projectId) {
+  const rows = await Asset.getUniqueConditionsByProject(projectId);
+
+  return rows.map((item) => item.value);
+},
+
+async getUniqueConditionsWithCounts(projectId) {
+  return Asset.getUniqueConditionsByProject(projectId);
+},
+
+async renameSubAssetType({
+  projectId,
+  oldSubAssetType,
+  newSubAssetType,
+  parent,
+}) {
+  return Asset.renameSubAssetTypeInProject({
     projectId,
-    subAssetType: {
-      $exists: true,
-      $nin: [null, ""],
-    },
+    oldSubAssetType,
+    newSubAssetType,
+    parent,
   });
-
-  const unique = new Set();
-
-  values.forEach((value) => {
-    const normalized = normalizeSubAssetType(value);
-
-    if (normalized) {
-      unique.add(normalized);
-    }
-  });
-
-  return Array.from(unique).sort((a, b) => a.localeCompare(b));
 },
 async deleteById(assetId) {
   const asset = await Asset.findByIdAndDelete(assetId).lean();
