@@ -21,6 +21,15 @@ const normalizeAssetType = (value, fallback = undefined) => {
   return normalized === "vehicle" ? "vehicle" : "other";
 };
 
+const normalizeNullableText = (value, fallback = undefined) => {
+  if (value === undefined) return fallback;
+  if (value === null) return null;
+
+  const text = String(value).trim();
+
+  return text || null;
+};
+
 const parseQuantity = (value, fallback = undefined) => {
   if (value === undefined || value === null || value === "") return fallback;
 
@@ -88,6 +97,9 @@ export const folderAssetController = {
     return res.status(201).json(result);
   },
 
+
+
+
  async createAsset(req, res) {
   const rawData = cleanRawData(parseRawData(req.body.rawData));
 
@@ -100,10 +112,7 @@ export const folderAssetController = {
     code: req.body.code || null,
     name: req.body.name,
 
-    condition:
-      req.body.condition === undefined || req.body.condition === ""
-        ? undefined
-        : req.body.condition,
+    condition: normalizeNullableText(req.body.condition, undefined),
 
     assetType: normalizeAssetType(req.body.assetType, "other"),
 
@@ -141,20 +150,14 @@ async updateAsset(req, res) {
 
     name: req.body.name === undefined ? undefined : req.body.name,
 
-    condition:
-      req.body.condition === undefined || req.body.condition === ""
-        ? undefined
-        : req.body.condition,
+    condition: normalizeNullableText(req.body.condition, undefined),
 
     assetType:
       req.body.assetType === undefined
         ? undefined
         : normalizeAssetType(req.body.assetType),
 
-    subAssetType:
-  req.body.subAssetType === undefined
-    ? undefined
-    : normalizeOptionalText(req.body.subAssetType, null),
+   subAssetType: normalizeNullableText(req.body.subAssetType, undefined),
 
 quantity:
   req.body.quantity === undefined
@@ -260,6 +263,27 @@ async advancedGetRawDataKeys(req, res) {
 
 async getProjectSubAssetTypes(req, res) {
   const result = await folderAssetService.getProjectSubAssetTypes({
+    userId: req.userId,
+    projectId: req.params.projectId,
+  });
+
+  return res.status(200).json(result);
+},
+
+  async renameProjectSubAssetType(req, res) {
+  const result = await folderAssetService.renameProjectSubAssetType({
+    userId: req.userId,
+    projectId: req.params.projectId,
+    oldSubAssetType: req.body.oldSubAssetType,
+    newSubAssetType: req.body.newSubAssetType,
+    parent: req.body.parent,
+  });
+
+  return res.status(200).json(result);
+},
+
+async getProjectConditions(req, res) {
+  const result = await folderAssetService.getProjectConditions({
     userId: req.userId,
     projectId: req.params.projectId,
   });
