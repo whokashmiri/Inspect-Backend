@@ -9,6 +9,7 @@ import {
   createFolderSchema,
   createAssetSchema,
   updateAssetSchema,
+  renameSubAssetTypeSchema
 } from "../validators/auth.validators.js";
 
 const router = Router();
@@ -18,7 +19,6 @@ router.get(
   authenticate,
   asyncWrap(folderAssetController.advancedGetRawDataKeys)
 );
-
 
 router.get(
   "/:projectId/contents/advanced-key-values",
@@ -31,9 +31,6 @@ router.get(
   authenticate,
   asyncWrap(folderAssetController.advancedSearchContents)
 );
-
-
-
 
 router.get(
   "/:projectId/contents",
@@ -61,11 +58,25 @@ router.get(
   asyncWrap(folderAssetController.getProjectSubAssetTypes)
 );
 
+router.patch(
+  "/:projectId/assets/sub-asset-types/rename",
+  authenticate,
+  validate(renameSubAssetTypeSchema),
+  asyncWrap(folderAssetController.renameProjectSubAssetType)
+);
+
+router.get(
+  "/:projectId/assets/conditions",
+  authenticate,
+  asyncWrap(folderAssetController.getProjectConditions)
+);
+
 router.get(
   "/:projectId/assets/by-code",
   authenticate,
   asyncWrap(folderAssetController.getAssetByCode)
 );
+
 router.patch(
   "/assets/:assetId",
   authenticate,
@@ -78,4 +89,5 @@ router.delete(
   authenticate,
   asyncWrap(folderAssetController.deleteAsset)
 );
+
 export default router;
