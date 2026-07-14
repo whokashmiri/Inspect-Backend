@@ -132,8 +132,19 @@ quantity: parseQuantity(req.body.quantity, undefined),
 
     notes: req.body.notes || null,
 
-    images: Array.isArray(req.body.images) ? req.body.images : [],
-    voiceNotes: Array.isArray(req.body.voiceNotes) ? req.body.voiceNotes : [],
+    images:
+  req.body.images === undefined
+    ? undefined
+    : Array.isArray(req.body.images)
+    ? req.body.images
+    : [],
+
+voiceNotes:
+  req.body.voiceNotes === undefined
+    ? undefined
+    : Array.isArray(req.body.voiceNotes)
+    ? req.body.voiceNotes
+    : [],
   });
 
   return res.status(201).json(result);
@@ -185,8 +196,19 @@ quantity:
 
     notes: req.body.notes === undefined ? undefined : req.body.notes,
 
-    images: Array.isArray(req.body.images) ? req.body.images : [],
-    voiceNotes: Array.isArray(req.body.voiceNotes) ? req.body.voiceNotes : [],
+    images:
+  req.body.images === undefined
+    ? undefined
+    : Array.isArray(req.body.images)
+    ? req.body.images
+    : [],
+
+voiceNotes:
+  req.body.voiceNotes === undefined
+    ? undefined
+    : Array.isArray(req.body.voiceNotes)
+    ? req.body.voiceNotes
+    : [],
   });
 
   return res.status(200).json(result);
