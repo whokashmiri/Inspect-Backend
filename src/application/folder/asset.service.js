@@ -161,6 +161,33 @@ function sanitizeImages(images = []) {
       };
     });
 }
+
+
+function getMediaKey(item = {}) {
+  return item.publicId || item.url || item.uri || null;
+}
+
+function mergeMediaWithoutDuplicates(existingItems = [], incomingItems = []) {
+  const seen = new Set();
+  const result = [];
+
+  const addItem = (item) => {
+    if (!item) return;
+
+    const key = getMediaKey(item);
+    if (!key) return;
+
+    if (seen.has(key)) return;
+
+    seen.add(key);
+    result.push(item);
+  };
+
+  existingItems.forEach(addItem);
+  incomingItems.forEach(addItem);
+
+  return result;
+}
 export const folderAssetService = {
   async createFolder({ userId, projectId, parentId, name }) {
     if (!name?.trim()) throw new AppError("Folder name is required", 400);
@@ -403,20 +430,21 @@ const normalizedNotes =
 
   
 const existingImages = sanitizeImages(existingAsset.images || []);
-const incomingImages = sanitizeImages(images || []);
+const incomingImages = images === undefined ? undefined : sanitizeImages(images);
 
-const nextImages = [
-  ...existingImages,
-  ...incomingImages,
-];
+const nextImages =
+  incomingImages === undefined
+    ? existingImages
+    : mergeMediaWithoutDuplicates(existingImages, incomingImages);
 
+const existingVoiceNotes = sanitizeVoiceNotes(existingAsset.voiceNotes || []);
+const incomingVoiceNotes =
+  voiceNotes === undefined ? undefined : sanitizeVoiceNotes(voiceNotes);
 
-
-
-const nextVoiceNotes = [
-  ...(existingAsset.voiceNotes || []),
-  ...sanitizeVoiceNotes(voiceNotes),
-];
+const nextVoiceNotes =
+  incomingVoiceNotes === undefined
+    ? existingVoiceNotes
+    : mergeMediaWithoutDuplicates(existingVoiceNotes, incomingVoiceNotes);;
 
 const nextRawData = cleanedIncomingRawData;
 
