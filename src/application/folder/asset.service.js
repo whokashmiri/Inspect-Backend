@@ -6,6 +6,8 @@ import { folderRepository } from "../../infrastructure/repositories/folder.repo.
 import { assetRepository } from "../../infrastructure/repositories/asset.repo.js";
 import { Project } from "../../models/Project.js"
 
+import { touchProjectSync } from "../project/projectSync.helper.js";
+
 async function getAccessibleProject(projectId, user) {
   const project = await projectRepository.findById(projectId);
   if (!project) throw new AppError("Project not found", 404);
@@ -207,14 +209,16 @@ export const folderAssetService = {
       }
     }
 
-    const folder = await folderRepository.create({
-      name: name.trim(),
-      projectId,
-      parentId,
-      createdById: user.id,
-    });
+   const folder = await folderRepository.create({
+  name: name.trim(),
+  projectId,
+  parentId,
+  createdById: user.id || user._id,
+});
 
-    return { folder };
+await touchProjectSync(projectId, "folder_created");
+
+return { folder };
   },
 
  async createAsset({
@@ -317,10 +321,10 @@ const finalRawData = cleanRawData(incomingRawData);
   notes: normalizedNotes.notes,
 
   isAssetFolder: true,
-  createdBy: user.id,
+  createdBy: user.id || user._id,
 });
 
-    await touchProject(projectId);
+    await touchProjectSync(projectId, "asset_created");
 
     return { asset };
   },
@@ -389,7 +393,7 @@ async updateAsset({
 
     await getAccessibleProject(existingAsset.projectId, user);
 
-const currentUserId = user.id.toString();
+const currentUserId = String(user.id || user._id);
 const assetCreatorId = existingAsset.createdBy?.id?.toString();
 const isCreator = assetCreatorId === currentUserId;
 
@@ -520,7 +524,7 @@ const updatedAsset = await assetRepository.updateById(assetId, {
   voiceNotes: nextVoiceNotes,
 });
 
-    await touchProject(existingAsset.projectId);
+    await touchProjectSync(existingAsset.projectId, "asset_updated");
 
     return { asset: updatedAsset };
   },
@@ -565,7 +569,7 @@ const updatedAsset = await assetRepository.updateById(assetId, {
 
   await getAccessibleProject(existingAsset.projectId, user);
 
-  const currentUserId = user.id.toString();
+  const currentUserId = String(user.id || user._id);
   const assetCreatorId = existingAsset.createdBy?.id?.toString();
 
   const isCreator = assetCreatorId === currentUserId;
@@ -578,6 +582,7 @@ const updatedAsset = await assetRepository.updateById(assetId, {
   }
 
   await assetRepository.deleteById(assetId);
+  await touchProjectSync(existingAsset.projectId, "asset_deleted");
 
   return {
     success: true,
@@ -677,7 +682,7 @@ async renameProjectSubAssetType({
     parent,
   });
 
-  await touchProject(projectId);
+  await touchProjectSync(projectId, "sub_asset_type_renamed");
 
   return {
     success: true,

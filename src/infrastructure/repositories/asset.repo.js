@@ -277,6 +277,8 @@ notes: normalizedNotes.notes,
     return mapAsset(asset.toObject());
   },
 
+
+
   async findById(assetId) {
     const asset = await Asset.findById(assetId)
       .populate("createdBy", "fullName email role")
@@ -284,6 +286,19 @@ notes: normalizedNotes.notes,
 
     return asset ? mapAsset(asset) : null;
   },
+
+  async findByProjectId(projectId) {
+    const assets = await Asset.find({
+      projectId,
+    })
+      .sort({ createdAt: 1 })
+      .populate("createdBy", "fullName email role")
+      .lean();
+
+    return assets.map(mapAsset);
+  },
+
+ 
 async updateById(assetId, updates) {
   const asset = await Asset.findById(assetId);
   if (!asset) return null;

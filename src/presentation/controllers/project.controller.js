@@ -1,7 +1,5 @@
 import { projectService } from "../../application/project/project.service.js";
 
-
-
 export const projectController = {
   async create(req, res) {
     const result = await projectService.create({
@@ -13,25 +11,42 @@ export const projectController = {
   },
 
   async updateWorkflow(req, res) {
+    const result = await projectService.updateWorkflow({
+      userId: req.userId,
+      projectId: req.params.projectId,
+      workflowStatus: req.body.workflowStatus,
+      isFavorite: req.body.isFavorite,
+    });
 
-  const result = await projectService.updateWorkflow({
-    userId: req.userId,
-    projectId: req.params.projectId,
-    workflowStatus: req.body.workflowStatus,
-    isFavorite: req.body.isFavorite,
-  });
- 
+    return res.status(200).json(result);
+  },
 
-  return res.status(200).json(result);
-},
+  async list(req, res) {
+    const result = await projectService.list(req.userId, {
+      companyId: req.query.companyId,
+    });
 
-async list(req, res) {
-  const result = await projectService.list(req.userId, {
-    companyId: req.query.companyId,
-  });
+    return res.status(200).json(result);
+  },
 
-  return res.status(200).json(result);
-},
+  async offlineManifest(req, res) {
+    const result = await projectService.offlineManifest({
+      userId: req.userId,
+      projectId: req.params.projectId,
+    });
+
+    return res.status(200).json(result);
+  },
+
+  async offlineChanges(req, res) {
+    const result = await projectService.offlineChanges({
+      userId: req.userId,
+      projectId: req.params.projectId,
+      sinceVersion: Number(req.query.sinceVersion || 0),
+    });
+
+    return res.status(200).json(result);
+  },
 
   async listInspectorFiles(req, res) {
     const result = await projectService.listInspectorFiles({
@@ -42,16 +57,14 @@ async list(req, res) {
     return res.status(200).json(result);
   },
 
- 
+  async listLocations(req, res) {
+    const result = await projectService.listLocations({
+      userId: req.userId,
+      projectId: req.params.projectId,
+    });
 
-async listLocations(req, res) {
-  const result = await projectService.listLocations({
-    userId: req.userId,
-    projectId: req.params.projectId,
-  });
-
-  return res.status(200).json(result);
-},
+    return res.status(200).json(result);
+  },
 
   async getInspectorFile(req, res) {
     const result = await projectService.getInspectorFile({

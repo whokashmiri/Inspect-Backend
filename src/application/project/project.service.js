@@ -1,8 +1,11 @@
 // application/project/project.service.js
 import { projectRepository } from "../../infrastructure/repositories/project.repo.js";
 import { userRepository } from "../../infrastructure/repositories/user.repo.js";
+import { folderRepository } from "../../infrastructure/repositories/folder.repo.js";
+import { assetRepository } from "../../infrastructure/repositories/asset.repo.js";
 import { createSignedInspectorFileUrl } from "../../infrastructure/spaces.js";
 import { AppError } from "../../utils/AppError.js";
+import { touchProjectSync } from "./projectSync.helper.js";
 
 export const projectService = {
   async create({ userId, name }) {
@@ -10,6 +13,7 @@ export const projectService = {
 
     const user = await userRepository.findById(userId);
     if (!user) throw new AppError("User not found", 404);
+
     if (!user.company?.id && !user.company?._id) {
       throw new AppError("User is not linked to a company", 400);
     }
@@ -17,7 +21,7 @@ export const projectService = {
     const project = await projectRepository.create({
       name: name.trim(),
       companyId: user.company.id || user.company._id,
-      userId: user.id,
+      userId: user.id || user._id,
       workflowStatus: "new",
       locations: [],
       inspectorFiles: [],
@@ -27,167 +31,246 @@ export const projectService = {
     return { project };
   },
 
-async list(userId, filters = {}) {
-  const user = await userRepository.findById(userId);
-  if (!user) throw new AppError("User not found", 404);
+  async list(userId, filters = {}) {
+    const user = await userRepository.findById(userId);
+    if (!user) throw new AppError("User not found", 404);
 
-  const requestedCompanyId = filters.companyId
-    ? String(filters.companyId)
-    : null;
+    const requestedCompanyId = filters.companyId
+      ? String(filters.companyId)
+      : null;
 
-  const userCompanyId = user.company?.id || user.company?._id;
+    const userCompanyId = user.company?.id || user.company?._id;
 
-  const companyProjects = userCompanyId
-    ? await projectRepository.findByCompanyId(userCompanyId)
-    : [];
+    const companyProjects = userCompanyId
+      ? await projectRepository.findByCompanyId(userCompanyId)
+      : [];
 
-  const inspectorProjects = await projectRepository.findByInspectorUserId(
-    user.id || user._id
-  );
-
-  const map = new Map();
-
-  [...companyProjects, ...inspectorProjects].forEach((project) => {
-    map.set(String(project.id || project._id), project);
-  });
-
-  let projects = Array.from(map.values());
-
-  if (requestedCompanyId) {
-    projects = projects.filter(
-      (project) => String(project.companyId) === requestedCompanyId
+    const inspectorProjects = await projectRepository.findByInspectorUserId(
+      user.id || user._id
     );
-  }
 
-  const companiesMap = new Map();
+    const map = new Map();
 
-  projects.forEach((project) => {
-    if (!project.companyId) return;
-
-    companiesMap.set(String(project.companyId), {
-      id: String(project.companyId),
-      name: project.company?.name || "",
+    [...companyProjects, ...inspectorProjects].forEach((project) => {
+      map.set(String(project.id || project._id), project);
     });
-  });
 
-  return {
-    projects,
-    companies: Array.from(companiesMap.values()),
-    selectedCompanyId: requestedCompanyId,
-  };
-},
+    let projects = Array.from(map.values());
 
-async updateWorkflow({ userId, projectId, workflowStatus, isFavorite }) {
-  await this.getCompanyProjectOrThrow({ userId, projectId });
-
-  const update = {};
-
-  if (workflowStatus !== undefined) {
-    if (!["new", "done"].includes(workflowStatus)) {
-      throw new AppError("Invalid workflow status", 400);
+    if (requestedCompanyId) {
+      projects = projects.filter(
+        (project) => String(project.companyId) === requestedCompanyId
+      );
     }
 
-    update.workflowStatus = workflowStatus;
-  }
+    const companiesMap = new Map();
 
-  if (isFavorite !== undefined) {
-    update.isFavorite = Boolean(isFavorite);
-  }
+    projects.forEach((project) => {
+      if (!project.companyId) return;
 
-  const updatedProject = await projectRepository.updateById(projectId, update);
+      companiesMap.set(String(project.companyId), {
+        id: String(project.companyId),
+        name: project.company?.name || "",
+      });
+    });
 
-  return { project: updatedProject };
-},
+    return {
+      projects,
+      companies: Array.from(companiesMap.values()),
+      selectedCompanyId: requestedCompanyId,
+    };
+  },
 
- async listInspectorFiles({ userId, projectId }) {
-  
-  await this.getCompanyProjectOrThrow({ userId, projectId });
+  async updateWorkflow({ userId, projectId, workflowStatus, isFavorite }) {
+    await this.getCompanyProjectOrThrow({ userId, projectId });
 
-  const result = await projectRepository.findInspectorFilesByProjectId(projectId);
+    const update = {};
 
-  return {
-    files: result?.inspectorFiles || [],
-  };
-},
+    if (workflowStatus !== undefined) {
+      if (!["new", "done"].includes(workflowStatus)) {
+        throw new AppError("Invalid workflow status", 400);
+      }
 
- async getInspectorFile({ userId, projectId, fileId }) {
-  await this.getCompanyProjectOrThrow({ userId, projectId });
+      update.workflowStatus = workflowStatus;
+    }
 
-  const result = await projectRepository.findInspectorFileById(projectId, fileId);
+    if (isFavorite !== undefined) {
+      update.isFavorite = Boolean(isFavorite);
+    }
 
-  if (!result?.file) {
-    throw new AppError("Inspector file not found", 404);
-  }
+    if (Object.keys(update).length === 0) {
+      throw new AppError("No valid project fields provided", 400);
+    }
 
-  return { file: result.file };
-},
+    const updatedProject = await projectRepository.updateById(projectId, update);
 
-async listLocations({ userId, projectId }) {
-  const project = await this.getCompanyProjectOrThrow({ userId, projectId });
+    await touchProjectSync(projectId, "project_workflow_updated");
 
-  return {
-    locations: (project.locations || []).map((location) => ({
-      id: location.id,
-      name: location.name,
-      region: location.region,
-      city: location.city,
-      latitude: location.latitude ?? null,
-      longitude: location.longitude ?? null,
-      mapUrl: location.mapUrl || "",
-      primaryPhone: location.primaryPhone || "",
-      secondaryPhone: location.secondaryPhone || "",
-      notes: location.notes || "",
-      inspectorFiles: location.inspectorFiles || [],
-    })),
-  };
-},
+    return { project: updatedProject };
+  },
 
-async getInspectorFileDownloadUrl({ userId, projectId, fileId }) {
-  const { file } = await this.getInspectorFile({
-    userId,
-    projectId,
-    fileId,
-  });
+  async offlineManifest({ userId, projectId }) {
+    const project = await this.getCompanyProjectOrThrow({ userId, projectId });
 
-  if (!file.spacesKey) {
-    throw new AppError("File storage key not available", 404);
-  }
+    return {
+      projectId: String(project.id || project._id),
+      syncVersion: Number(project.syncVersion || 1),
+      updatedAt: project.updatedAt || null,
+      lastSyncedChangeAt:
+        project.lastSyncedChangeAt ||
+        project.updatedAt ||
+        project.createdAt ||
+        null,
+    };
+  },
 
-  const signedUrl = await createSignedInspectorFileUrl(file);
+  async offlineChanges({ userId, projectId, sinceVersion }) {
+    const project = await this.getCompanyProjectOrThrow({ userId, projectId });
 
-  return {
-    url: signedUrl,
-    file,
-  };
-},
-async getCompanyProjectOrThrow({ userId, projectId }) {
-  if (!projectId) {
-    throw new AppError("Project ID is required", 400);
-  }
+    const currentVersion = Number(project.syncVersion || 1);
+    const clientVersion = Number(sinceVersion || 0);
 
-  const user = await userRepository.findById(userId);
-  if (!user) throw new AppError("User not found", 404);
+    if (clientVersion >= currentVersion) {
+      return {
+        projectId: String(project.id || project._id),
+        syncVersion: currentVersion,
+        updatedAt: project.updatedAt || null,
+        lastSyncedChangeAt:
+          project.lastSyncedChangeAt ||
+          project.updatedAt ||
+          project.createdAt ||
+          null,
+        hasChanges: false,
+        project: null,
+        folders: [],
+        assets: [],
+        deletedFolders: [],
+        deletedAssets: [],
+      };
+    }
 
-  const project = await projectRepository.findById(projectId);
+    const [folders, assets] = await Promise.all([
+      projectRepository.findFoldersForOffline
+        ? projectRepository.findFoldersForOffline(projectId)
+        : folderRepository.findByProjectId(projectId),
 
-  if (!project) {
-    throw new AppError("Project not found", 404);
-  }
+      projectRepository.findAssetsForOffline
+        ? projectRepository.findAssetsForOffline(projectId)
+        : assetRepository.findByProjectId(projectId),
+    ]);
 
-  const companyId = user.company?.id || user.company?._id;
+    return {
+      projectId: String(project.id || project._id),
+      syncVersion: currentVersion,
+      updatedAt: project.updatedAt || null,
+      lastSyncedChangeAt:
+        project.lastSyncedChangeAt ||
+        project.updatedAt ||
+        project.createdAt ||
+        null,
+      hasChanges: true,
+      project,
+      folders: folders || [],
+      assets: assets || [],
+      deletedFolders: [],
+      deletedAssets: [],
+    };
+  },
 
-  const hasCompanyAccess =
-    companyId && String(project.companyId) === String(companyId);
+  async listInspectorFiles({ userId, projectId }) {
+    await this.getCompanyProjectOrThrow({ userId, projectId });
 
-  const hasInspectorAccess = (project.inspectionAssignments || []).some(
-    (assignment) =>
-      String(assignment.inspectorUserId) === String(user.id || user._id)
-  );
+    const result = await projectRepository.findInspectorFilesByProjectId(
+      projectId
+    );
 
-  if (!hasCompanyAccess && !hasInspectorAccess) {
-    throw new AppError("You do not have access to this project", 403);
-  }
+    return {
+      files: result?.inspectorFiles || [],
+    };
+  },
 
-  return project;
-},
+  async getInspectorFile({ userId, projectId, fileId }) {
+    await this.getCompanyProjectOrThrow({ userId, projectId });
+
+    const result = await projectRepository.findInspectorFileById(
+      projectId,
+      fileId
+    );
+
+    if (!result?.file) {
+      throw new AppError("Inspector file not found", 404);
+    }
+
+    return { file: result.file };
+  },
+
+  async listLocations({ userId, projectId }) {
+    const project = await this.getCompanyProjectOrThrow({ userId, projectId });
+
+    return {
+      locations: (project.locations || []).map((location) => ({
+        id: location.id,
+        name: location.name,
+        region: location.region,
+        city: location.city,
+        latitude: location.latitude ?? null,
+        longitude: location.longitude ?? null,
+        mapUrl: location.mapUrl || "",
+        primaryPhone: location.primaryPhone || "",
+        secondaryPhone: location.secondaryPhone || "",
+        notes: location.notes || "",
+        inspectorFiles: location.inspectorFiles || [],
+      })),
+    };
+  },
+
+  async getInspectorFileDownloadUrl({ userId, projectId, fileId }) {
+    const { file } = await this.getInspectorFile({
+      userId,
+      projectId,
+      fileId,
+    });
+
+    if (!file.spacesKey) {
+      throw new AppError("File storage key not available", 404);
+    }
+
+    const signedUrl = await createSignedInspectorFileUrl(file);
+
+    return {
+      url: signedUrl,
+      file,
+    };
+  },
+
+  async getCompanyProjectOrThrow({ userId, projectId }) {
+    if (!projectId) {
+      throw new AppError("Project ID is required", 400);
+    }
+
+    const user = await userRepository.findById(userId);
+    if (!user) throw new AppError("User not found", 404);
+
+    const project = await projectRepository.findById(projectId);
+
+    if (!project) {
+      throw new AppError("Project not found", 404);
+    }
+
+    const companyId = user.company?.id || user.company?._id;
+
+    const hasCompanyAccess =
+      companyId && String(project.companyId) === String(companyId);
+
+    const hasInspectorAccess = (project.inspectionAssignments || []).some(
+      (assignment) =>
+        String(assignment.inspectorUserId) === String(user.id || user._id)
+    );
+
+    if (!hasCompanyAccess && !hasInspectorAccess) {
+      throw new AppError("You do not have access to this project", 403);
+    }
+
+    return project;
+  },
 };

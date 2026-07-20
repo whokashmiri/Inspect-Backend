@@ -101,8 +101,15 @@ const mapProject = (doc, stats = emptyStats) => {
   return {
     id: toId(doc._id),
     name: doc.name,
+
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt ?? null,
+
+    // IMPORTANT FOR OFFLINE AUTO-SYNC
+    syncVersion: Number(doc.syncVersion || 1),
+    lastSyncedChangeAt:
+      doc.lastSyncedChangeAt || doc.updatedAt || doc.createdAt || null,
+
     workflowStatus: doc.workflowStatus,
     reportType: doc.reportType ?? "simple",
     reportData: doc.reportData ?? {},
@@ -113,8 +120,8 @@ const mapProject = (doc, stats = emptyStats) => {
     inspectorFiles,
 
     inspectionAssignments: (doc.inspectionAssignments || []).map(
-  mapInspectionAssignment
-),
+      mapInspectionAssignment
+    ),
 
     companyId: toId(doc.companyId),
     userId: toId(doc.userId),
@@ -217,6 +224,25 @@ async findRawById(id) {
   if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
 
   return Project.findById(id).lean();
+},
+
+async touchSyncById(id) {
+  if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
+
+  return Project.findByIdAndUpdate(
+    id,
+    {
+      $inc: { syncVersion: 1 },
+      $currentDate: {
+        updatedAt: true,
+        lastSyncedChangeAt: true,
+      },
+    },
+    {
+      new: true,
+      select: "_id syncVersion updatedAt lastSyncedChangeAt",
+    }
+  ).lean();
 },
 
 

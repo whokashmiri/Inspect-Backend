@@ -236,6 +236,18 @@ isFavorite: {
     displayNumber: {
       type: Number,
     },
+
+      syncVersion: {
+      type: Number,
+      default: 1,
+      index: true,
+    },
+
+    lastSyncedChangeAt: {
+      type: Date,
+      default: Date.now,
+      index: true,
+    },
   },
   {
     timestamps: true,
