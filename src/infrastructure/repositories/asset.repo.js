@@ -63,6 +63,20 @@ const mapImage = (image) => ({
   createdAt: image.createdAt,
 });
 
+// Maps the structured images object stored on the asset doc:
+//   Vehicle assets: { plate, details, odometer, other[] }
+//   Other assets:   { details, brand, other[] }
+// Slots that don't apply to the asset's assetType will already be null
+// (cleared by the model's pre("validate") hook), so we just map whatever
+// is present.
+const mapImages = (images = {}) => ({
+  plate: images?.plate ? mapImage(images.plate) : null,
+  details: images?.details ? mapImage(images.details) : null,
+  odometer: images?.odometer ? mapImage(images.odometer) : null,
+  brand: images?.brand ? mapImage(images.brand) : null,
+  other: Array.isArray(images?.other) ? images.other.map(mapImage) : [],
+});
+
 const mapVoiceNote = (note) => ({
   id: toId(note._id),
   url: note.url,
@@ -107,7 +121,7 @@ const mapAsset = (doc) => ({
 
   createdBy: mapCreatedBy(doc.createdBy),
 
-  images: (doc.images || []).map(mapImage),
+  images: mapImages(doc.images || {}),
   voiceNotes: (doc.voiceNotes || []).map(mapVoiceNote),
 });
 
@@ -190,6 +204,37 @@ function normalizeNotes(notes) {
   };
 }
 
+// --- Image shaping (final pass before hitting the DB) ------------------
+// Defensive re-shaping so whatever shape the caller passes in (service
+// layer already sanitizes, but this keeps the repo self-sufficient), the
+// document written to Mongo always matches the assetImagesSchema shape.
+
+const normalizeImageForDb = (item) => {
+  if (!item || typeof item !== "object") return null;
+
+  const url = typeof item.url === "string" ? item.url.trim() : "";
+  if (!url) return null;
+
+  return {
+    url,
+    publicId: item.publicId ?? null,
+    mediaType: item.mediaType === "video" ? "video" : "image",
+    mimeType: item.mimeType ?? null,
+    duration: item.duration ?? null,
+    thumbnailUrl: item.thumbnailUrl ?? null,
+  };
+};
+
+const normalizeImagesForDb = (images = {}) => ({
+  plate: normalizeImageForDb(images.plate),
+  details: normalizeImageForDb(images.details),
+  odometer: normalizeImageForDb(images.odometer),
+  brand: normalizeImageForDb(images.brand),
+  other: Array.isArray(images.other)
+    ? images.other.map(normalizeImageForDb).filter(Boolean)
+    : [],
+});
+
 export const assetRepository = {
 async create({
   name,
@@ -246,16 +291,7 @@ const normalizedNotes = normalizeNotes(notes);
       parent: parent || null,
       createdBy,
 
-      images: (images || [])
-  .filter((item) => item?.url)
-  .map((item) => ({
-    url: item.url,
-    publicId: item.publicId ?? null,
-    mediaType: item.mediaType ?? "image",
-    mimeType: item.mimeType ?? null,
-    duration: item.duration ?? null,
-    thumbnailUrl: item.thumbnailUrl ?? null,
-  })),
+      images: normalizeImagesForDb(images || {}),
 
       voiceNotes: (voiceNotes || []).map((item) => ({
         url: item.url,
@@ -325,12 +361,22 @@ async updateById(assetId, updates) {
     updates.rawData = cleanRawData(updates.rawData);
   }
 
+  // "images" arrives from the service layer as the *complete*, already
+  // merged structured object ({ plate, details, odometer, brand, other }).
+  // We still re-shape it defensively before assigning it to the doc.
+  if (updates.images !== undefined) {
+    updates.images = normalizeImagesForDb(updates.images);
+  }
+
   Object.keys(updates).forEach((key) => {
     if (updates[key] !== undefined) {
       asset[key] = updates[key];
     }
   });
 
+  // pre("validate") on the model clears out image slots (and vehicle-only
+  // fields) that don't apply to the current assetType, so this save is
+  // what keeps the doc consistent whenever assetType or images change.
   await asset.save();
   await asset.populate("createdBy", "fullName email role");
 
