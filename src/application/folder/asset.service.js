@@ -125,43 +125,108 @@ function sanitizeVoiceNotes(voiceNotes = []) {
     }));
 }
 
+// --- Image helpers -------------------------------------------------------
+// Images are now stored as a structured object rather than a flat array:
+//   Vehicle assets: { plate, details, odometer, other[] }
+//   Other assets:   { details, brand, other[] }
+// (Whichever slots don't apply to the asset's assetType get cleared by the
+// model's pre("validate") hook on save, so this layer doesn't need to know
+// assetType to do its job.)
 
-function sanitizeImages(images = []) {
-  if (!Array.isArray(images)) return [];
+// Sanitizes a single image object (used for plate/details/odometer/brand
+// and for each item inside "other"). Mirrors the previous per-item logic
+// that used to run over the old flat array.
+function sanitizeSingleImage(item) {
+  if (!item || typeof item !== "object") return null;
 
-  return images
-    .filter((item) => {
-      return typeof item?.url === "string" && item.url.trim().length > 0;
-    })
-    .map((item) => {
-      const url = item.url.trim();
+  const url = typeof item.url === "string" ? item.url.trim() : "";
+  if (!url) return null;
 
-      const mediaType =
-        item.mediaType === "video" ||
-        item.mimeType?.startsWith?.("video/") ||
-        url.includes("/video/upload/") ||
-        url.toLowerCase().endsWith(".mp4") ||
-        url.toLowerCase().endsWith(".mov")
-          ? "video"
-          : "image";
+  const mediaType =
+    item.mediaType === "video" ||
+    item.mimeType?.startsWith?.("video/") ||
+    url.includes("/video/upload/") ||
+    url.toLowerCase().endsWith(".mp4") ||
+    url.toLowerCase().endsWith(".mov")
+      ? "video"
+      : "image";
 
-      return {
-        url,
-        publicId: item.publicId ?? null,
-        mediaType,
-        mimeType:
-          item.mimeType ??
-          (mediaType === "video" ? "video/mp4" : "image/jpeg"),
-        duration:
-          mediaType === "video" && typeof item.duration === "number"
-            ? Math.round(item.duration)
-            : null,
-        thumbnailUrl:
-          mediaType === "video"
-            ? item.thumbnailUrl ?? null
-            : null,
-      };
-    });
+  return {
+    url,
+    publicId: item.publicId ?? null,
+    mediaType,
+    mimeType:
+      item.mimeType ?? (mediaType === "video" ? "video/mp4" : "image/jpeg"),
+    duration:
+      mediaType === "video" && typeof item.duration === "number"
+        ? Math.round(item.duration)
+        : null,
+    thumbnailUrl: mediaType === "video" ? item.thumbnailUrl ?? null : null,
+  };
+}
+
+// Sanitizes only the slots that are actually present on the incoming
+// object, so callers can tell "not provided" (key absent) apart from
+// "explicitly cleared" (key present but null/invalid -> sanitized to null).
+function sanitizeImagesPartial(images) {
+  if (!images || typeof images !== "object" || Array.isArray(images)) {
+    return {};
+  }
+
+  const result = {};
+
+  if ("plate" in images) result.plate = sanitizeSingleImage(images.plate);
+  if ("details" in images) result.details = sanitizeSingleImage(images.details);
+  if ("odometer" in images) result.odometer = sanitizeSingleImage(images.odometer);
+  if ("brand" in images) result.brand = sanitizeSingleImage(images.brand);
+
+  if ("other" in images) {
+    result.other = Array.isArray(images.other)
+      ? images.other.map(sanitizeSingleImage).filter(Boolean)
+      : [];
+  }
+
+  return result;
+}
+
+// Builds a fully-shaped images object for a brand-new asset.
+function buildFullImages(images) {
+  const partial = sanitizeImagesPartial(images);
+
+  return {
+    plate: partial.plate ?? null,
+    details: partial.details ?? null,
+    odometer: partial.odometer ?? null,
+    brand: partial.brand ?? null,
+    other: partial.other ?? [],
+  };
+}
+
+// Merges an incoming (possibly partial) images payload into the asset's
+// existing images:
+//  - single-image slots (plate/details/odometer/brand) are REPLACED when
+//    provided (re-uploading a slot's photo swaps it, it doesn't stack)
+//  - the "other" array is MERGED without duplicates when provided
+//  - any slot not present in the incoming payload is left untouched
+function mergeImages(existingImages = {}, incomingImages) {
+  if (incomingImages === undefined) return existingImages;
+
+  const partial = sanitizeImagesPartial(incomingImages);
+  const next = { ...existingImages };
+
+  if ("plate" in partial) next.plate = partial.plate;
+  if ("details" in partial) next.details = partial.details;
+  if ("odometer" in partial) next.odometer = partial.odometer;
+  if ("brand" in partial) next.brand = partial.brand;
+
+  if ("other" in partial) {
+    next.other = mergeMediaWithoutDuplicates(
+      existingImages.other || [],
+      partial.other
+    );
+  }
+
+  return next;
 }
 
 
@@ -311,7 +376,7 @@ const finalRawData = cleanRawData(incomingRawData);
   isDone: isDone !== undefined ? isDone : false,
   isPresent: isPresent !== undefined ? isPresent : true,
 
-  images: sanitizeImages(images),
+  images: buildFullImages(images),
   voiceNotes: sanitizeVoiceNotes(voiceNotes),
 
   projectId,
@@ -433,13 +498,12 @@ const normalizedNotes =
     : normalizeNotes(notes);
 
   
-const existingImages = sanitizeImages(existingAsset.images || []);
-const incomingImages = images === undefined ? undefined : sanitizeImages(images);
-
-const nextImages =
-  incomingImages === undefined
-    ? existingImages
-    : mergeMediaWithoutDuplicates(existingImages, incomingImages);
+// images comes back from findById already in the structured
+// { plate, details, odometer, brand, other[] } shape (see asset.repo.js
+// mapImages). mergeImages replaces single slots that were provided and
+// merges the "other" array without duplicates; anything not sent in this
+// request is left as-is.
+const nextImages = mergeImages(existingAsset.images || {}, images);
 
 const existingVoiceNotes = sanitizeVoiceNotes(existingAsset.voiceNotes || []);
 const incomingVoiceNotes =
