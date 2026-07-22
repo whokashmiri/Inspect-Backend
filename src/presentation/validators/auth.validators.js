@@ -104,6 +104,37 @@ const uploadedImageSchema = z.object({
   thumbnailUrl: z.string().url("Invalid thumbnail URL").optional().nullable(),
 });
 
+// Structured images payload:
+//   Vehicle assets use: plate, details, odometer, other[]
+//   Other assets use:   details, brand, other[]
+// Every single-image slot is nullable (null = explicitly clear that slot).
+// Slots that don't apply to the asset's assetType are ignored/cleared
+// downstream by the model, so this schema stays permissive about which
+// slots are present — it just validates shape, not asset-type relevance.
+const assetImagesObjectSchema = z.object({
+  plate: uploadedImageSchema.optional().nullable(),
+  details: uploadedImageSchema.optional().nullable(),
+  odometer: uploadedImageSchema.optional().nullable(),
+  brand: uploadedImageSchema.optional().nullable(),
+  other: z.array(uploadedImageSchema).optional(),
+});
+
+// Accepts the new structured object, or (for backward compatibility with
+// older clients) a plain array — which the controller treats as the
+// "other" slot.
+const assetImagesPayloadSchema = z.union([
+  assetImagesObjectSchema,
+  z.array(uploadedImageSchema),
+]);
+
+const emptyImagesDefault = {
+  plate: null,
+  details: null,
+  odometer: null,
+  brand: null,
+  other: [],
+};
+
 const uploadedVoiceNoteSchema = z.object({
   url: z.string().url("Invalid voice note URL"),
   publicId: z.string().optional().nullable(),
@@ -233,9 +264,11 @@ condition: z.preprocess(
     z.string().optional().nullable()
   ),
 
+  // New assets get a fully-shaped images object by default so downstream
+  // code always sees plate/details/odometer/brand/other present.
   images: z.preprocess(
     jsonPreprocess,
-    z.array(uploadedImageSchema).optional().default([])
+    assetImagesPayloadSchema.optional().default(emptyImagesDefault)
   ),
 
   voiceNotes: z.preprocess(
@@ -298,10 +331,11 @@ subAssetType: z.preprocess(
     z.string().optional().nullable()
   ),
 
-  images: z.preprocess(
-    jsonPreprocess,
-    z.array(uploadedImageSchema).optional().default([])
-  ),
+  // No default here on purpose: omitting "images" entirely on update means
+  // "don't touch existing images" (see folderAssetService.updateAsset /
+  // mergeImages). Only whichever slots are actually sent get validated and
+  // applied; the rest stay untouched.
+  images: z.preprocess(jsonPreprocess, assetImagesPayloadSchema.optional()),
 
   voiceNotes: z.preprocess(
     jsonPreprocess,

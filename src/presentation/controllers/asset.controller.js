@@ -85,6 +85,81 @@ const normalizeOptionalText = (value, fallback = undefined) => {
   return text || fallback;
 };
 
+// --- Image helpers -----------------------------------------------------
+// The Asset model now stores images as a structured object instead of a
+// flat array:
+//   Vehicle assets: { plate, details, odometer, other[] }
+//   Other assets:   { details, brand, other[] }
+// Slots that don't apply to the asset's assetType are cleared automatically
+// by the model's pre("validate") hook, so the controller doesn't need to
+// know the assetType to normalize incoming image data — it just sanitizes
+// whichever slots were sent.
+
+const normalizeSingleImage = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const url = typeof value.url === "string" ? value.url.trim() : "";
+  if (!url) return null;
+
+  return {
+    url,
+    publicId: normalizeNullableText(value.publicId, null),
+    mediaType: value.mediaType === "video" ? "video" : "image",
+    mimeType: normalizeNullableText(value.mimeType, null),
+    duration: Number.isFinite(Number(value.duration))
+      ? Number(value.duration)
+      : null,
+    thumbnailUrl: normalizeNullableText(value.thumbnailUrl, null),
+  };
+};
+
+const normalizeImageArray = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value.map(normalizeSingleImage).filter(Boolean);
+};
+
+// Accepts the new structured shape: { plate, details, odometer, brand, other }
+// For backward compatibility, if a plain array is sent (old format), it is
+// treated as the "other" slot so existing clients don't hard-break.
+//
+// On create: pass fallback = {} so a brand-new asset always gets a fully
+// shaped images object.
+// On update: pass fallback = undefined so omitting "images" leaves existing
+// images untouched.
+const normalizeImages = (value, fallback = undefined) => {
+  if (value === undefined) return fallback;
+
+  if (Array.isArray(value)) {
+    return {
+      plate: null,
+      details: null,
+      odometer: null,
+      brand: null,
+      other: normalizeImageArray(value),
+    };
+  }
+
+  if (!value || typeof value !== "object") {
+    return {
+      plate: null,
+      details: null,
+      odometer: null,
+      brand: null,
+      other: [],
+    };
+  }
+
+  return {
+    plate: normalizeSingleImage(value.plate),
+    details: normalizeSingleImage(value.details),
+    odometer: normalizeSingleImage(value.odometer),
+    brand: normalizeSingleImage(value.brand),
+    other: normalizeImageArray(value.other),
+  };
+};
+
 export const folderAssetController = {
   async createFolder(req, res) {
     const result = await folderAssetService.createFolder({
@@ -132,12 +207,13 @@ quantity: parseQuantity(req.body.quantity, undefined),
 
     notes: req.body.notes || null,
 
-    images:
-  req.body.images === undefined
-    ? undefined
-    : Array.isArray(req.body.images)
-    ? req.body.images
-    : [],
+    images: normalizeImages(req.body.images, {
+      plate: null,
+      details: null,
+      odometer: null,
+      brand: null,
+      other: [],
+    }),
 
 voiceNotes:
   req.body.voiceNotes === undefined
@@ -196,12 +272,10 @@ quantity:
 
     notes: req.body.notes === undefined ? undefined : req.body.notes,
 
-    images:
-  req.body.images === undefined
-    ? undefined
-    : Array.isArray(req.body.images)
-    ? req.body.images
-    : [],
+    // Leaving "images" out of the request body keeps existing images
+    // untouched. Sending "images" replaces the whole structured object
+    // (send the full set of slots you want to keep, not just a delta).
+    images: normalizeImages(req.body.images, undefined),
 
 voiceNotes:
   req.body.voiceNotes === undefined
