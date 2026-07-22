@@ -41,6 +41,29 @@ const assetVoiceNoteSchema = new mongoose.Schema(
   { timestamps: { createdAt: "createdAt", updatedAt: false } }
 );
 
+// Structured image slots.
+// - Vehicle assets use: plate, details, odometer, other[]
+// - Other assets use:   details, brand, other[]
+// Slots that don't apply to the asset's current assetType are cleared
+// automatically in the pre("validate") hook below.
+const assetImagesSchema = new mongoose.Schema(
+  {
+    // Vehicle-only single-image slots
+    plate: { type: assetImageSchema, default: null },
+    odometer: { type: assetImageSchema, default: null },
+
+    // Other-only single-image slot
+    brand: { type: assetImageSchema, default: null },
+
+    // Shared single-image slot (used by both vehicle & other assets)
+    details: { type: assetImageSchema, default: null },
+
+    // Shared multi-image slot (used by both vehicle & other assets)
+    other: { type: [assetImageSchema], default: [] },
+  },
+  { _id: false }
+);
+
 const escapeRegex = (value = "") =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -182,9 +205,10 @@ const assetSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Structured, type-specific image slots (see assetImagesSchema above)
     images: {
-      type: [assetImageSchema],
-      default: [],
+      type: assetImagesSchema,
+      default: () => ({}),
     },
 
     voiceNotes: {
@@ -232,15 +256,28 @@ assetSchema.pre("validate", function (next) {
     this.quantity = Math.floor(quantity);
   }
 
+  // Ensure the images sub-object always exists before we start
+  // clearing/setting slots on it.
+  if (!this.images) {
+    this.images = {};
+  }
+
   if (this.assetType === "vehicle") {
     this.quantity = 1;
     this.subAssetType = "vehicle";
+
+    // Vehicle assets don't use the "brand" image slot (that's for "other" assets)
+    this.images.brand = null;
   } else {
     this.brand = null;
     this.model = null;
     this.manufactureYear = null;
     this.kilometersDriven = null;
     this.subAssetType = normalizeSubAssetType(this.subAssetType);
+
+    // "Other" assets don't use the vehicle-only image slots
+    this.images.plate = null;
+    this.images.odometer = null;
   }
 
   next();
