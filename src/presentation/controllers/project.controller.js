@@ -76,6 +76,31 @@ export const projectController = {
     return res.status(200).json(result);
   },
 
+  async updateInspectionDetails(req, res) {
+  const result = await projectService.updateInspectionDetails({
+    userId: req.userId,
+    projectId: req.params.projectId,
+    inspectionLocation: req.body.inspectionLocation,
+    inspectionMapUrl: req.body.inspectionMapUrl,
+    inspectionDate: req.body.inspectionDate,
+  });
+
+  return res.status(200).json(result);
+},
+
+  async addProjectVideo(req, res) {
+    const result = await projectService.addProjectVideo({
+      userId: req.userId,
+      projectId: req.params.projectId,
+      publicId: req.body.publicId,
+      name: req.body.name,
+      locationIds: req.body.locationIds,
+    });
+
+    return res.status(201).json(result);
+  },
+
+
   async downloadInspectorFile(req, res) {
     const result = await projectService.getInspectorFileDownloadUrl({
       userId: req.userId,
