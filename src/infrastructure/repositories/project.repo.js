@@ -15,11 +15,23 @@ const mapInspectorFile = (file) => {
     url: file.url,
     uploadedBy: toId(file.uploadedBy),
     createdAt: file.createdAt,
-    storage: file.storage,
-    spacesKey: file.spacesKey,
-    mimeType: file.mimeType,
-    sizeBytes: file.sizeBytes,
-    locationIds: file.locationIds || []
+
+    storage:
+      file.storage ||
+      (file.publicId ? "cloudinary" : "digitalocean"),
+
+    spacesKey: file.spacesKey ?? null,
+    publicId: file.publicId ?? null,
+
+    mimeType: file.mimeType ?? "",
+    sizeBytes: Number(file.sizeBytes || 0),
+    duration:
+      typeof file.duration === "number"
+        ? file.duration
+        : null,
+    thumbnailUrl: file.thumbnailUrl ?? null,
+
+    locationIds: file.locationIds || [],
   };
 };
 
@@ -114,6 +126,21 @@ const mapProject = (doc, stats = emptyStats) => {
     reportType: doc.reportType ?? "simple",
     reportData: doc.reportData ?? {},
     isFavorite: doc.isFavorite ?? false,
+
+inspectionLocation:
+  doc.inspectionLocation ||
+  doc.reportData?.inspectionLocation ||
+  "",
+
+inspectionMapUrl:
+  doc.inspectionMapUrl ||
+  doc.reportData?.inspectionMapUrl ||
+  "",
+
+inspectionDate:
+  doc.inspectionDate ??
+  doc.reportData?.inspectionDate ??
+  null,
 
     locations,
 
@@ -333,6 +360,11 @@ async findInspectorFileById(projectId, fileId) {
   isFavorite = false,
   reportType = "simple",
   reportData = {},
+
+
+   inspectionLocation = "",
+  inspectionMapUrl = "",
+  inspectionDate = null,
    locations = [],
  
   inspectorFiles = [],
@@ -345,6 +377,12 @@ async findInspectorFileById(projectId, fileId) {
     reportType,
     isFavorite,
     reportData,
+
+ inspectionLocation,
+    inspectionMapUrl,
+    inspectionDate,
+
+
      locations,
     
     inspectorFiles,
@@ -368,6 +406,42 @@ async findInspectorFileById(projectId, fileId) {
       mapProject(project, statsMap[project._id.toString()] ?? emptyStats)
     );
   },
+
+
+  async addInspectorFile(projectId, file) {
+  if (
+    !projectId ||
+    !mongoose.Types.ObjectId.isValid(projectId)
+  ) {
+    return null;
+  }
+
+  const project = await populateProjectQuery(
+    Project.findByIdAndUpdate(
+      projectId,
+      {
+        $push: {
+          inspectorFiles: file,
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    )
+  ).lean();
+
+  if (!project) return null;
+
+  const statsMap = await getStatsMap([
+    project._id.toString(),
+  ]);
+
+  return mapProject(
+    project,
+    statsMap[project._id.toString()] ?? emptyStats
+  );
+},
 
 async updateById(id, update) {
   if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
