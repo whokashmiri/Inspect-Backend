@@ -3,17 +3,36 @@ import mongoose from "mongoose";
 
 const inspectorFileSchema = new mongoose.Schema(
   {
-    id: { type: String, required: true },
+    id: {
+      type: String,
+      required: true,
+    },
 
-    name: { type: String, required: true, trim: true },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
     type: {
       type: String,
       required: true,
-      enum: ["excel", "pdf", "word", "image", "audio", "other"],
+      enum: [
+        "excel",
+        "pdf",
+        "word",
+        "image",
+        "video", // NEW
+        "audio",
+        "other",
+      ],
     },
 
-    url: { type: String, required: true },
+    url: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -26,21 +45,46 @@ const inspectorFileSchema = new mongoose.Schema(
       default: Date.now,
     },
 
-    storage: {
-      type: String,
-      default: "digitalocean",
-      trim: true,
-    },
+ storage: {
+  type: String,
+  enum: ["digitalocean", "cloudinary"],
+  default: "digitalocean",
+  trim: true,
+},
 
-    spacesKey: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+spacesKey: {
+  type: String,
+  trim: true,
+  default: null,
+  required() {
+    return this.storage === "digitalocean";
+  },
+},
+
+publicId: {
+  type: String,
+  trim: true,
+  default: null,
+  required() {
+    return this.storage === "cloudinary";
+  },
+},
+
+duration: {
+  type: Number,
+  default: null,
+},
+
+thumbnailUrl: {
+  type: String,
+  trim: true,
+  default: null,
+},
 
     mimeType: {
       type: String,
       trim: true,
+      default: "",
     },
 
     sizeBytes: {
@@ -48,7 +92,6 @@ const inspectorFileSchema = new mongoose.Schema(
       default: 0,
     },
 
-    // NEW: file can belong to one or more locations
     locationIds: {
       type: [String],
       default: [],
@@ -99,7 +142,6 @@ const locationSchema = new mongoose.Schema(
       default: "",
     },
 
-    // phone now belongs to location
     primaryPhone: {
       type: String,
       trim: true,
@@ -112,7 +154,6 @@ const locationSchema = new mongoose.Schema(
       default: "",
     },
 
-    // NEW
     notes: {
       type: String,
       trim: true,
@@ -186,25 +227,18 @@ const projectSchema = new mongoose.Schema(
       required: true,
     },
 
-    // workflowStatus: {
-    //   type: String,
-    //   required: true,
-    //   default: "new",
-    //   trim: true,
-    // },
-
     workflowStatus: {
-  type: String,
-  enum: ["new", "done"],
-  required: true,
-  default: "new",
-  trim: true,
-},
+      type: String,
+      enum: ["new", "done"],
+      required: true,
+      default: "new",
+      trim: true,
+    },
 
-isFavorite: {
-  type: Boolean,
-  default: false,
-},
+    isFavorite: {
+      type: Boolean,
+      default: false,
+    },
 
     reportType: {
       type: String,
@@ -217,27 +251,50 @@ isFavorite: {
       default: {},
     },
 
+    // NEW: inspection location copied from
+    // reportData.inspectionLocation
+    inspectionLocation: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    // NEW: inspection map copied from
+    // reportData.inspectionMapUrl
+    inspectionMapUrl: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    // NEW: inspection date copied from
+    // reportData.inspectionDate
+    inspectionDate: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+
     locations: {
       type: [locationSchema],
       default: [],
     },
 
-    // contacts removed intentionally
     inspectorFiles: {
       type: [inspectorFileSchema],
       default: [],
     },
 
     inspectionAssignments: {
-  type: [inspectionAssignmentSchema],
-  default: [],
-},
+      type: [inspectionAssignmentSchema],
+      default: [],
+    },
 
     displayNumber: {
       type: Number,
     },
 
-      syncVersion: {
+    syncVersion: {
       type: Number,
       default: 1,
       index: true,
