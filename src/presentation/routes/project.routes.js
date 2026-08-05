@@ -30,6 +30,19 @@ router.patch(
   projectController.updateWorkflow
 );
 
+
+router.patch(
+  "/:projectId/inspection-details",
+  authenticate,
+  projectController.updateInspectionDetails
+);
+
+router.post(
+  "/:projectId/videos",
+  authenticate,
+  projectController.addProjectVideo
+);
+
 router.get(
   "/:projectId/locations",
   authenticate,
