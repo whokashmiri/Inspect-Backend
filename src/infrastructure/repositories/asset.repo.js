@@ -63,12 +63,6 @@ const mapImage = (image) => ({
   createdAt: image.createdAt,
 });
 
-// Maps the structured images object stored on the asset doc:
-//   Vehicle assets: { plate, details, odometer, other[] }
-//   Other assets:   { details, brand, other[] }
-// Slots that don't apply to the asset's assetType will already be null
-// (cleared by the model's pre("validate") hook), so we just map whatever
-// is present.
 const mapImages = (images = {}) => ({
   plate: images?.plate ? mapImage(images.plate) : null,
   details: images?.details ? mapImage(images.details) : null,
@@ -203,11 +197,6 @@ function normalizeNotes(notes) {
     hasNotes: notesText.length > 0,
   };
 }
-
-// --- Image shaping (final pass before hitting the DB) ------------------
-// Defensive re-shaping so whatever shape the caller passes in (service
-// layer already sanitizes, but this keeps the repo self-sufficient), the
-// document written to Mongo always matches the assetImagesSchema shape.
 
 const normalizeImageForDb = (item) => {
   if (!item || typeof item !== "object") return null;
@@ -361,9 +350,6 @@ async updateById(assetId, updates) {
     updates.rawData = cleanRawData(updates.rawData);
   }
 
-  // "images" arrives from the service layer as the *complete*, already
-  // merged structured object ({ plate, details, odometer, brand, other }).
-  // We still re-shape it defensively before assigning it to the doc.
   if (updates.images !== undefined) {
     updates.images = normalizeImagesForDb(updates.images);
   }
@@ -374,9 +360,6 @@ async updateById(assetId, updates) {
     }
   });
 
-  // pre("validate") on the model clears out image slots (and vehicle-only
-  // fields) that don't apply to the current assetType, so this save is
-  // what keeps the doc consistent whenever assetType or images change.
   await asset.save();
   await asset.populate("createdBy", "fullName email role");
 
