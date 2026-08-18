@@ -5,6 +5,7 @@ import folderAssetRoutes from "./presentation/routes/folder.routes.js";
 import { errorHandler } from "./presentation/middleware/error.middleware.js";
 import mediaRoutes from "./presentation/routes/media.routes.js";
 import transactionRoutes from "./presentation/routes/transaction.routes.js";
+import assetCategoryRoutes from "./presentation/routes/assetCategory.routes.js";
 
 
 
@@ -22,6 +23,7 @@ app.use("/api/v1/projects", projectRoutes);
 app.use("/api/v1/projects", folderAssetRoutes);
 app.use("/api/v1/media", mediaRoutes);
 app.use("/api/v1/transactions", transactionRoutes);
+app.use("/api/v1/asset-categories", assetCategoryRoutes);
 
 app.use(errorHandler);
 
