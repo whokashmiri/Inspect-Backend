@@ -14,6 +14,8 @@ const parseBoolean = (value, fallback = undefined) => {
   return fallback;
 };
 
+
+
 const normalizeAssetType = (value, fallback = undefined) => {
   if (value === undefined || value === null || value === "") return fallback;
 
@@ -40,6 +42,33 @@ const parseQuantity = (value, fallback = undefined) => {
   }
 
   return Math.floor(numberValue);
+};
+
+const parseObject = (value) => {
+  if (!value) return {};
+
+  if (
+    typeof value === "object" &&
+    !Array.isArray(value)
+  ) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+
+      return parsed &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed)
+        ? parsed
+        : {};
+    } catch {
+      return {};
+    }
+  }
+
+  return {};
 };
 
 const parseRawData = (value) => {
@@ -71,7 +100,7 @@ const cleanRawData = (rawData) => {
       : {};
 
   delete cleaned.quantity;
-  delete cleaned.subAssetType;
+  // delete cleaned.subAssetType;
   delete cleaned.customAssetType;
 
   return cleaned;
@@ -133,6 +162,7 @@ const normalizeImages = (value, fallback = undefined) => {
 
   if (Array.isArray(value)) {
     return {
+      main: null,
       plate: null,
       details: null,
       odometer: null,
@@ -143,6 +173,7 @@ const normalizeImages = (value, fallback = undefined) => {
 
   if (!value || typeof value !== "object") {
     return {
+      main: null,
       plate: null,
       details: null,
       odometer: null,
@@ -152,6 +183,7 @@ const normalizeImages = (value, fallback = undefined) => {
   }
 
   return {
+    main: normalizeSingleImage(value.main),
     plate: normalizeSingleImage(value.plate),
     details: normalizeSingleImage(value.details),
     odometer: normalizeSingleImage(value.odometer),
@@ -159,6 +191,64 @@ const normalizeImages = (value, fallback = undefined) => {
     other: normalizeImageArray(value.other),
   };
 };
+
+const normalizeImagesPartial = (
+  value,
+  fallback = undefined,
+) => {
+  if (value === undefined) {
+    return fallback;
+  }
+
+  if (Array.isArray(value)) {
+    return {
+      other:
+        normalizeImageArray(value),
+    };
+  }
+
+  if (
+    !value ||
+    typeof value !== "object"
+  ) {
+    return fallback;
+  }
+
+  const result = {};
+
+  if ("main" in value) {
+    result.main =
+      normalizeSingleImage(value.main);
+  }
+
+  if ("plate" in value) {
+    result.plate =
+      normalizeSingleImage(value.plate);
+  }
+
+  if ("details" in value) {
+    result.details =
+      normalizeSingleImage(value.details);
+  }
+
+  if ("odometer" in value) {
+    result.odometer =
+      normalizeSingleImage(value.odometer);
+  }
+
+  if ("brand" in value) {
+    result.brand =
+      normalizeSingleImage(value.brand);
+  }
+
+  if ("other" in value) {
+    result.other =
+      normalizeImageArray(value.other);
+  }
+
+  return result;
+};
+
 
 export const folderAssetController = {
   async createFolder(req, res) {
@@ -176,114 +266,212 @@ export const folderAssetController = {
 
 
  async createAsset(req, res) {
+
+  const normalizedData =
+  req.body.normalizedData === undefined
+    ? undefined
+    : parseObject(
+        req.body.normalizedData,
+      );
   const rawData = cleanRawData(parseRawData(req.body.rawData));
 
-  const result = await folderAssetService.createAsset({
-    userId: req.userId,
-    projectId: req.params.projectId,
+ const result = await folderAssetService.createAsset({
+  userId: req.userId,
+  projectId: req.params.projectId,
 
-    parent: req.body.parent ?? req.body.folderId ?? null,
+  parent: req.body.parent ?? req.body.folderId ?? null,
 
-    code: req.body.code || null,
-    name: req.body.name,
+  code: req.body.code || null,
+  name: req.body.name,
 
-    condition: normalizeNullableText(req.body.condition, undefined),
+  categoryId: normalizeNullableText(req.body.categoryId, null),
+  category: normalizeNullableText(req.body.category, null),
 
-    assetType: normalizeAssetType(req.body.assetType, "other"),
+  typeId: normalizeNullableText(req.body.typeId, null),
+  type: normalizeNullableText(req.body.type, null),
 
-   subAssetType: normalizeOptionalText(req.body.subAssetType, undefined),
+  nameId: normalizeNullableText(req.body.nameId, null),
 
-quantity: parseQuantity(req.body.quantity, undefined),
+  normalizedData,
 
-    rawData,
+newAssetLocation:
+  normalizeNullableText(
+    req.body.newAssetLocation,
+    null,
+  ),
 
-    brand: req.body.brand || null,
-    model: req.body.model || null,
-    manufactureYear: req.body.manufactureYear || null,
-    kilometersDriven: req.body.kilometersDriven || null,
+  condition: normalizeNullableText(req.body.condition, undefined),
 
-    isDone: parseBoolean(req.body.isDone, false),
-    isPresent: parseBoolean(req.body.isPresent, true),
+  assetType: normalizeAssetType(req.body.assetType, "other"),
 
-    notes: req.body.notes || null,
 
-    images: normalizeImages(req.body.images, {
-      plate: null,
-      details: null,
-      odometer: null,
-      brand: null,
-      other: [],
-    }),
 
-voiceNotes:
-  req.body.voiceNotes === undefined
-    ? undefined
-    : Array.isArray(req.body.voiceNotes)
-    ? req.body.voiceNotes
-    : [],
-  });
+  quantity: parseQuantity(
+    req.body.quantity,
+    undefined,
+  ),
 
+  rawData,
+
+  brand: req.body.brand || null,
+  model: req.body.model || null,
+  manufactureYear: req.body.manufactureYear || null,
+  kilometersDriven: req.body.kilometersDriven || null,
+
+  isDone: parseBoolean(req.body.isDone, false),
+  isPresent: parseBoolean(req.body.isPresent, true),
+
+  notes: req.body.notes || null,
+
+  images: normalizeImages(req.body.images, {
+    main: null,
+    plate: null,
+    details: null,
+    odometer: null,
+    brand: null,
+    other: [],
+  }),
+
+  voiceNotes:
+    req.body.voiceNotes === undefined
+      ? undefined
+      : Array.isArray(req.body.voiceNotes)
+        ? req.body.voiceNotes
+        : [],
+});
   return res.status(201).json(result);
 },
 async updateAsset(req, res) {
+
+  const normalizedData =
+  req.body.normalizedData === undefined
+    ? undefined
+    : parseObject(
+        req.body.normalizedData,
+      );
   const rawData =
   req.body.rawData === undefined
     ? undefined
     : cleanRawData(parseRawData(req.body.rawData));
 
-  const result = await folderAssetService.updateAsset({
-    userId: req.userId,
-    assetId: req.params.assetId,
+const result = await folderAssetService.updateAsset({
+  userId: req.userId,
+  assetId: req.params.assetId,
 
-    name: req.body.name === undefined ? undefined : req.body.name,
+  name:
+    req.body.name === undefined
+      ? undefined
+      : req.body.name,
 
-    condition: normalizeNullableText(req.body.condition, undefined),
+  categoryId:
+    req.body.categoryId === undefined
+      ? undefined
+      : normalizeNullableText(req.body.categoryId, null),
 
-    assetType:
-      req.body.assetType === undefined
-        ? undefined
-        : normalizeAssetType(req.body.assetType),
+  category:
+    req.body.category === undefined
+      ? undefined
+      : normalizeNullableText(req.body.category, null),
 
-   subAssetType: normalizeNullableText(req.body.subAssetType, undefined),
+  typeId:
+    req.body.typeId === undefined
+      ? undefined
+      : normalizeNullableText(req.body.typeId, null),
 
-quantity:
-  req.body.quantity === undefined
+  type:
+    req.body.type === undefined
+      ? undefined
+      : normalizeNullableText(req.body.type, null),
+
+      normalizedData,
+
+newAssetLocation:
+  req.body.newAssetLocation === undefined
     ? undefined
-    : parseQuantity(req.body.quantity, undefined),
+    : normalizeNullableText(
+        req.body.newAssetLocation,
+        null,
+      ),
 
-    rawData,
+  nameId:
+    req.body.nameId === undefined
+      ? undefined
+      : normalizeNullableText(req.body.nameId, null),
 
-    brand: req.body.brand === undefined ? undefined : req.body.brand,
-    model: req.body.model === undefined ? undefined : req.body.model,
-    code: req.body.code === undefined ? undefined : req.body.code,
+  condition: normalizeNullableText(
+    req.body.condition,
+    undefined,
+  ),
 
-    manufactureYear:
-      req.body.manufactureYear === undefined
-        ? undefined
-        : req.body.manufactureYear,
+  assetType:
+    req.body.assetType === undefined
+      ? undefined
+      : normalizeAssetType(req.body.assetType),
 
-    kilometersDriven:
-      req.body.kilometersDriven === undefined
-        ? undefined
-        : req.body.kilometersDriven,
+  
 
-    isDone: parseBoolean(req.body.isDone, undefined),
-    isPresent: parseBoolean(req.body.isPresent, undefined),
+  quantity:
+    req.body.quantity === undefined
+      ? undefined
+      : parseQuantity(
+          req.body.quantity,
+          undefined,
+        ),
 
-    notes: req.body.notes === undefined ? undefined : req.body.notes,
+  rawData,
 
-    // Leaving "images" out of the request body keeps existing images
-    // untouched. Sending "images" replaces the whole structured object
-    // (send the full set of slots you want to keep, not just a delta).
-    images: normalizeImages(req.body.images, undefined),
+  brand:
+    req.body.brand === undefined
+      ? undefined
+      : req.body.brand,
 
-voiceNotes:
-  req.body.voiceNotes === undefined
-    ? undefined
-    : Array.isArray(req.body.voiceNotes)
-    ? req.body.voiceNotes
-    : [],
-  });
+  model:
+    req.body.model === undefined
+      ? undefined
+      : req.body.model,
+
+  code:
+    req.body.code === undefined
+      ? undefined
+      : req.body.code,
+
+  manufactureYear:
+    req.body.manufactureYear === undefined
+      ? undefined
+      : req.body.manufactureYear,
+
+  kilometersDriven:
+    req.body.kilometersDriven === undefined
+      ? undefined
+      : req.body.kilometersDriven,
+
+  isDone: parseBoolean(
+    req.body.isDone,
+    undefined,
+  ),
+
+  isPresent: parseBoolean(
+    req.body.isPresent,
+    undefined,
+  ),
+
+  notes:
+    req.body.notes === undefined
+      ? undefined
+      : req.body.notes,
+
+images: normalizeImagesPartial(
+  req.body.images,
+  undefined,
+),
+
+  voiceNotes:
+    req.body.voiceNotes === undefined
+      ? undefined
+      : Array.isArray(req.body.voiceNotes)
+        ? req.body.voiceNotes
+        : [],
+});
 
   return res.status(200).json(result);
 },
@@ -357,23 +545,16 @@ async advancedGetRawDataKeys(req, res) {
   return res.status(200).json(result);
 },
 
-async getProjectSubAssetTypes(req, res) {
-  const result = await folderAssetService.getProjectSubAssetTypes({
-    userId: req.userId,
-    projectId: req.params.projectId,
-  });
-
-  return res.status(200).json(result);
-},
-
-  async renameProjectSubAssetType(req, res) {
-  const result = await folderAssetService.renameProjectSubAssetType({
-    userId: req.userId,
-    projectId: req.params.projectId,
-    oldSubAssetType: req.body.oldSubAssetType,
-    newSubAssetType: req.body.newSubAssetType,
-    parent: req.body.parent,
-  });
+async getProjectAssetLocations(req, res) {
+  const result =
+    await folderAssetService.getProjectAssetLocations({
+      userId: req.userId,
+      projectId: req.params.projectId,
+      parent:
+        req.query.parent === undefined
+          ? undefined
+          : req.query.parent || null,
+    });
 
   return res.status(200).json(result);
 },
