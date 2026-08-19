@@ -59,14 +59,21 @@ function normalizeQuantity(value) {
   return Math.floor(numberValue);
 }
 
-function normalizeSubAssetType(value) {
+function normalizeLocation(value) {
   if (value === undefined) return undefined;
+  if (value === null) return null;
 
-  const text = String(value || "")
-    .trim()
-    .toLowerCase();
+  const text = String(value).trim();
 
   return text || null;
+}
+
+function cleanNormalizedData(normalizedData) {
+  return normalizedData &&
+    typeof normalizedData === "object" &&
+    !Array.isArray(normalizedData)
+    ? { ...normalizedData }
+    : {};
 }
 
 function cleanRawData(rawData) {
@@ -78,9 +85,12 @@ function cleanRawData(rawData) {
   delete cleaned.quantity;
   delete cleaned.subAssetType;
   delete cleaned.customAssetType;
+  delete cleaned.asset_location;
 
   return cleaned;
 }
+
+
 
 function normalizeNotes(notes) {
   const notesText = String(notes || "").trim();
@@ -94,6 +104,13 @@ function normalizeNotes(notes) {
 function normalizeOptionalString(value) {
   if (value === undefined) return undefined;
   return value?.trim() || null;
+}
+function normalizeTaxonomyField(value) {
+  if (value === undefined) return undefined;
+
+  const text = String(value || "").trim();
+
+  return text || null;
 }
 
 function normalizeVehicleOnlyField(assetType, value) {
@@ -174,7 +191,9 @@ function sanitizeImagesPartial(images) {
   }
 
   const result = {};
-
+if ("main" in images) {
+  result.main = sanitizeSingleImage(images.main);
+}
   if ("plate" in images) result.plate = sanitizeSingleImage(images.plate);
   if ("details" in images) result.details = sanitizeSingleImage(images.details);
   if ("odometer" in images) result.odometer = sanitizeSingleImage(images.odometer);
@@ -189,11 +208,13 @@ function sanitizeImagesPartial(images) {
   return result;
 }
 
+
 // Builds a fully-shaped images object for a brand-new asset.
 function buildFullImages(images) {
   const partial = sanitizeImagesPartial(images);
 
   return {
+     main: partial.main ?? null,
     plate: partial.plate ?? null,
     details: partial.details ?? null,
     odometer: partial.odometer ?? null,
@@ -214,6 +235,7 @@ function mergeImages(existingImages = {}, incomingImages) {
   const partial = sanitizeImagesPartial(incomingImages);
   const next = { ...existingImages };
 
+  if ("main" in partial) next.main = partial.main;
   if ("plate" in partial) next.plate = partial.plate;
   if ("details" in partial) next.details = partial.details;
   if ("odometer" in partial) next.odometer = partial.odometer;
@@ -294,7 +316,13 @@ return { folder };
   name,
   condition,
   assetType,
-  subAssetType,
+  categoryId,
+  category,
+  typeId,
+  type,
+  nameId,
+  normalizedData,
+newAssetLocation,
   quantity,
   rawData,
   brand,
@@ -328,6 +356,33 @@ return { folder };
     }
 
     const normalizedAssetType = normalizeAssetType(assetType);
+
+    
+    const normalizedCategoryId =
+  normalizedAssetType === "other"
+    ? normalizeTaxonomyField(categoryId)
+    : null;
+
+const normalizedCategory =
+  normalizedAssetType === "other"
+    ? normalizeTaxonomyField(category)
+    : null;
+
+const normalizedTypeId =
+  normalizedAssetType === "other"
+    ? normalizeTaxonomyField(typeId)
+    : null;
+
+const normalizedType =
+  normalizedAssetType === "other"
+    ? normalizeTaxonomyField(type)
+    : null;
+
+const normalizedNameId =
+  normalizedAssetType === "other"
+    ? normalizeTaxonomyField(nameId)
+    : null;
+    
     const normalizedCondition = normalizeCondition(condition);
     const normalizedCode = normalizeOptionalString(code);
 const incomingRawData =
@@ -337,9 +392,13 @@ const incomingRawData =
 
 const normalizedQuantity = normalizeQuantity(quantity);
 
-const normalizedSubAssetType =
-  normalizeSubAssetType(subAssetType) ??
-  (normalizedAssetType === "vehicle" ? "vehicle" : null);
+const finalNormalizedData =
+  cleanNormalizedData(normalizedData);
+
+const normalizedNewAssetLocation =
+  normalizedAssetType === "other"
+    ? normalizeLocation(newAssetLocation)
+    : null;
 
 const normalizedNotes = normalizeNotes(notes);
     const normalizedBrand = normalizeVehicleOnlyField(normalizedAssetType, brand);
@@ -363,7 +422,16 @@ const finalRawData = cleanRawData(incomingRawData);
   condition: normalizedCondition,
   assetType: normalizedAssetType,
 
-  subAssetType: normalizedSubAssetType,
+    categoryId: normalizedCategoryId,
+  category: normalizedCategory,
+
+  typeId: normalizedTypeId,
+  type: normalizedType,
+
+  nameId: normalizedNameId,
+
+  normalizedData: finalNormalizedData,
+newAssetLocation: normalizedNewAssetLocation,
   quantity: normalizedQuantity,
   rawData: finalRawData,
 
@@ -393,6 +461,31 @@ const finalRawData = cleanRawData(incomingRawData);
 
     return { asset };
   },
+  async getProjectAssetLocations({
+  userId,
+  projectId,
+  parent,
+}) {
+  const user = await userRepository.findById(userId);
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  await getAccessibleProject(projectId, user);
+
+  const locations =
+    await assetRepository.getUniqueAssetLocations(
+      projectId,
+      {
+        parent,
+      },
+    );
+
+  return {
+    locations,
+  };
+},
 
   async listContents({ userId, projectId, parentId }) {
     const user = await userRepository.findById(userId);
@@ -430,8 +523,15 @@ async updateAsset({
   assetId,
   name,
   condition,
+
+  categoryId,
+  category,
+  typeId,
+  type,
+  nameId,
   assetType,
-  subAssetType,
+  normalizedData,
+newAssetLocation,
   quantity,
   rawData,
   brand,
@@ -468,6 +568,41 @@ const isCreator = assetCreatorId === currentUserId;
         ? normalizeAssetType(existingAsset.assetType)
         : normalizeAssetType(assetType);
 
+        const nextCategoryId =
+  nextAssetType === "vehicle"
+    ? null
+    : categoryId === undefined
+      ? existingAsset.categoryId ?? null
+      : normalizeTaxonomyField(categoryId);
+
+const nextCategory =
+  nextAssetType === "vehicle"
+    ? null
+    : category === undefined
+      ? existingAsset.category ?? null
+      : normalizeTaxonomyField(category);
+
+const nextTypeId =
+  nextAssetType === "vehicle"
+    ? null
+    : typeId === undefined
+      ? existingAsset.typeId ?? null
+      : normalizeTaxonomyField(typeId);
+
+const nextType =
+  nextAssetType === "vehicle"
+    ? null
+    : type === undefined
+      ? existingAsset.type ?? null
+      : normalizeTaxonomyField(type);
+
+const nextNameId =
+  nextAssetType === "vehicle"
+    ? null
+    : nameId === undefined
+      ? existingAsset.nameId ?? null
+      : normalizeTaxonomyField(nameId);
+
     const normalizedCondition = normalizeCondition(condition);
     const normalizedCode = normalizeOptionalString(code);
 
@@ -483,11 +618,17 @@ const nextQuantity =
     ? existingAsset.quantity || 1
     : normalizeQuantity(quantity);
 
-const nextSubAssetType =
-  subAssetType === undefined
-    ? normalizeSubAssetType(existingAsset.subAssetType)
-    : normalizeSubAssetType(subAssetType) ??
-      (nextAssetType === "vehicle" ? "vehicle" : null);
+const nextNormalizedData =
+  normalizedData === undefined
+    ? existingAsset.normalizedData || {}
+    : cleanNormalizedData(normalizedData);
+
+const nextNewAssetLocation =
+  nextAssetType === "vehicle"
+    ? null
+    : newAssetLocation === undefined
+      ? existingAsset.newAssetLocation ?? null
+      : normalizeLocation(newAssetLocation);
 
 const normalizedNotes =
   notes === undefined
@@ -534,7 +675,16 @@ const updatedAsset = await assetRepository.updateById(assetId, {
       ? existingAsset.assetType
       : nextAssetType,
 
-  subAssetType: nextSubAssetType,
+    categoryId: nextCategoryId,
+  category: nextCategory,
+
+  typeId: nextTypeId,
+  type: nextType,
+
+  nameId: nextNameId,
+
+  normalizedData: nextNormalizedData,
+newAssetLocation: nextNewAssetLocation,
   quantity: nextQuantity,
   rawData: nextRawData,
 
@@ -690,18 +840,6 @@ async advancedGetRawDataKeyValues({ userId, projectId, key }) {
   });
 },
 
-async getProjectSubAssetTypes({ userId, projectId }) {
-  const user = await userRepository.findById(userId);
-  if (!user) throw new AppError("User not found", 404);
-
-  await getAccessibleProject(projectId, user);
-
-  const subAssetTypes = await assetRepository.getUniqueSubAssetTypes(projectId);
-
-  return {
-    subAssetTypes,
-  };
-},
 
 async getProjectConditions({ userId, projectId }) {
   const user = await userRepository.findById(userId);
@@ -716,41 +854,5 @@ async getProjectConditions({ userId, projectId }) {
   };
 },
 
-async renameProjectSubAssetType({
-  userId,
-  projectId,
-  oldSubAssetType,
-  newSubAssetType,
-  parent,
-}) {
-  const user = await userRepository.findById(userId);
-  if (!user) throw new AppError("User not found", 404);
 
-  await getAccessibleProject(projectId, user);
-
-  const oldValue = String(oldSubAssetType || "").trim().toLowerCase();
-  const newValue = String(newSubAssetType || "").trim().toLowerCase();
-
-  if (!oldValue) {
-    throw new AppError("Old sub asset type is required", 400);
-  }
-
-  if (!newValue) {
-    throw new AppError("New sub asset type is required", 400);
-  }
-
-  const result = await assetRepository.renameSubAssetType({
-    projectId,
-    oldSubAssetType: oldValue,
-    newSubAssetType: newValue,
-    parent,
-  });
-
-  await touchProjectSync(projectId, "sub_asset_type_renamed");
-
-  return {
-    success: true,
-    ...result,
-  };
-}
 };
