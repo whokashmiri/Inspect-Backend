@@ -64,6 +64,7 @@ const mapImage = (image) => ({
 });
 
 const mapImages = (images = {}) => ({
+  main: images?.main ? mapImage(images.main) : null,
   plate: images?.plate ? mapImage(images.plate) : null,
   details: images?.details ? mapImage(images.details) : null,
   odometer: images?.odometer ? mapImage(images.odometer) : null,
@@ -83,12 +84,20 @@ const mapAsset = (doc) => ({
   id: toId(doc._id),
 
   name: doc.name,
+  categoryId: doc.categoryId ?? null,
+category: doc.category ?? null,
+
+typeId: doc.typeId ?? null,
+type: doc.type ?? null,
+
+nameId: doc.nameId ?? null,
 
   condition: doc.condition ?? null,
 
   assetType: doc.assetType ?? "other",
 
-  subAssetType: doc.subAssetType ?? null,
+  normalizedData: cleanNormalizedData(doc.normalizedData ?? {}),
+newAssetLocation: doc.newAssetLocation ?? null,
 
   quantity: doc.quantity ?? 1,
 
@@ -158,14 +167,21 @@ function normalizeQuantity(value) {
   return Math.floor(numberValue);
 }
 
-function normalizeSubAssetType(value) {
+function normalizeLocation(value) {
   if (value === undefined) return undefined;
+  if (value === null) return null;
 
-  const text = String(value || "")
-    .trim()
-    .toLowerCase();
+  const text = String(value).trim();
 
   return text || null;
+}
+
+function cleanNormalizedData(normalizedData) {
+  return normalizedData &&
+    typeof normalizedData === "object" &&
+    !Array.isArray(normalizedData)
+    ? { ...normalizedData }
+    : {};
 }
 
 function normalizeCondition(value) {
@@ -215,6 +231,7 @@ const normalizeImageForDb = (item) => {
 };
 
 const normalizeImagesForDb = (images = {}) => ({
+  main: normalizeImageForDb(images.main),
   plate: normalizeImageForDb(images.plate),
   details: normalizeImageForDb(images.details),
   odometer: normalizeImageForDb(images.odometer),
@@ -228,8 +245,14 @@ export const assetRepository = {
 async create({
   name,
   condition,
+  categoryId,
+  category,
+  typeId,
+  type,
+  nameId,
   assetType,
-  subAssetType,
+  normalizedData,
+newAssetLocation,
   quantity,
   brand,
   model,
@@ -254,15 +277,27 @@ const incomingRawData =
 
 const normalizedQuantity = normalizeQuantity(quantity);
 
-const normalizedSubAssetType =
-  normalizeSubAssetType(subAssetType) ??
-  (assetType === "vehicle" ? "vehicle" : null);
+const finalNormalizedData =
+  cleanNormalizedData(normalizedData);
+
+const normalizedNewAssetLocation =
+  assetType === "vehicle"
+    ? null
+    : normalizeLocation(newAssetLocation);
 
 const finalRawData = cleanRawData(incomingRawData);
 
 const normalizedNotes = normalizeNotes(notes);
     const asset = new Asset({
       name,
+
+       categoryId: categoryId ?? null,
+  category: category ?? null,
+
+  typeId: typeId ?? null,
+  type: type ?? null,
+
+  nameId: nameId ?? null,
      
       condition: normalizeCondition(condition) ?? "Good",
       assetType: assetType || "other",
@@ -271,7 +306,8 @@ const normalizedNotes = normalizeNotes(notes);
       code: code ?? null,
       manufactureYear: manufactureYear ?? null,
       kilometersDriven: kilometersDriven ?? null,
-      subAssetType: normalizedSubAssetType,
+      normalizedData: finalNormalizedData,
+newAssetLocation: normalizedNewAssetLocation,
       quantity: normalizedQuantity,
 
       rawData: finalRawData,
@@ -342,9 +378,15 @@ async updateById(assetId, updates) {
   updates.condition = normalizeCondition(updates.condition);
 }
 
-  if (updates.subAssetType !== undefined) {
-    updates.subAssetType = normalizeSubAssetType(updates.subAssetType);
-  }
+ if (updates.normalizedData !== undefined) {
+  updates.normalizedData =
+    cleanNormalizedData(updates.normalizedData);
+}
+
+if (updates.newAssetLocation !== undefined) {
+  updates.newAssetLocation =
+    normalizeLocation(updates.newAssetLocation);
+}
 
   if (updates.rawData !== undefined) {
     updates.rawData = cleanRawData(updates.rawData);
@@ -353,6 +395,39 @@ async updateById(assetId, updates) {
   if (updates.images !== undefined) {
     updates.images = normalizeImagesForDb(updates.images);
   }
+
+  const normalizeTaxonomyValue = (value) => {
+  if (value === undefined) return undefined;
+
+  const text = String(value || "").trim();
+
+  return text || null;
+};
+
+if (updates.categoryId !== undefined) {
+  updates.categoryId =
+    normalizeTaxonomyValue(updates.categoryId);
+}
+
+if (updates.category !== undefined) {
+  updates.category =
+    normalizeTaxonomyValue(updates.category);
+}
+
+if (updates.typeId !== undefined) {
+  updates.typeId =
+    normalizeTaxonomyValue(updates.typeId);
+}
+
+if (updates.type !== undefined) {
+  updates.type =
+    normalizeTaxonomyValue(updates.type);
+}
+
+if (updates.nameId !== undefined) {
+  updates.nameId =
+    normalizeTaxonomyValue(updates.nameId);
+}
 
   Object.keys(updates).forEach((key) => {
     if (updates[key] !== undefined) {
@@ -518,11 +593,7 @@ async advancedGetRawDataKeys({ userId, projectId }) {
   };
 },
 
-async getUniqueSubAssetTypes(projectId, options = {}) {
-  const rows = await Asset.getUniqueSubAssetTypesByProject(projectId, options);
 
-  return rows.map((item) => item.value);
-},
 
 
 
@@ -537,18 +608,95 @@ async getUniqueConditionsWithCounts(projectId) {
   return Asset.getUniqueConditionsByProject(projectId);
 },
 
-async renameSubAssetType({
+async getProjectAssetLocations({
+  userId,
   projectId,
-  oldSubAssetType,
-  newSubAssetType,
   parent,
 }) {
-  return Asset.renameSubAssetTypeInProject({
+  const user =
+    await userRepository.findById(userId);
+
+  if (!user) {
+    throw new AppError(
+      "User not found",
+      404,
+    );
+  }
+
+  await getAccessibleProject(
     projectId,
-    oldSubAssetType,
-    newSubAssetType,
-    parent,
-  });
+    user,
+  );
+
+  const locations =
+    await assetRepository.getUniqueAssetLocations(
+      projectId,
+      {
+        parent,
+      },
+    );
+
+  return {
+    locations,
+  };
+},
+
+async getUniqueAssetLocations(projectId, options = {}) {
+  const query = {
+    projectId,
+    assetType: "other",
+  };
+
+  if (options.parent !== undefined) {
+    query.parent = options.parent || null;
+  }
+
+  const assets = await Asset.find(query)
+    .select("normalizedData.asset_location newAssetLocation")
+    .lean();
+
+  const seen = new Map();
+
+  for (const asset of assets) {
+    const importedLocation =
+      asset?.normalizedData?.asset_location;
+
+    const newLocation =
+      asset?.newAssetLocation;
+
+    const addLocation = (value, source) => {
+      const text =
+        typeof value === "string"
+          ? value.trim()
+          : "";
+
+      if (!text) return;
+
+      const key = text.toLowerCase();
+
+      if (!seen.has(key)) {
+        seen.set(key, {
+          value: text,
+          source,
+        });
+      }
+    };
+
+    addLocation(
+      importedLocation,
+      "normalizedData",
+    );
+
+    addLocation(
+      newLocation,
+      "newAssetLocation",
+    );
+  }
+
+  return Array.from(seen.values()).sort(
+    (a, b) =>
+      a.value.localeCompare(b.value),
+  );
 },
 async deleteById(assetId) {
   const asset = await Asset.findByIdAndDelete(assetId).lean();
