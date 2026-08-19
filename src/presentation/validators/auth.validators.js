@@ -112,6 +112,7 @@ const uploadedImageSchema = z.object({
 // downstream by the model, so this schema stays permissive about which
 // slots are present — it just validates shape, not asset-type relevance.
 const assetImagesObjectSchema = z.object({
+  main: uploadedImageSchema.optional().nullable(),
   plate: uploadedImageSchema.optional().nullable(),
   details: uploadedImageSchema.optional().nullable(),
   odometer: uploadedImageSchema.optional().nullable(),
@@ -128,6 +129,7 @@ const assetImagesPayloadSchema = z.union([
 ]);
 
 const emptyImagesDefault = {
+  main:null,
   plate: null,
   details: null,
   odometer: null,
@@ -189,29 +191,44 @@ const nullableStringTrimPreprocess = (value) => {
   return text || null;
 };
 
+const taxonomyStringSchema = z.preprocess(
+  nullableStringTrimPreprocess,
+  z.string().max(200).optional().nullable()
+);
+
 export const createFolderSchema = z.object({
   name: z.string().min(1, "Folder name is required"),
   parentId: optionalOfflineId,
 });
 
-export const renameSubAssetTypeSchema = z.object({
-  oldSubAssetType: z.preprocess(
-    stringTrimPreprocess,
-    z.string().min(1, "Old sub asset type is required").max(80)
-  ),
-
-  newSubAssetType: z.preprocess(
-    stringTrimPreprocess,
-    z.string().min(1, "New sub asset type is required").max(80)
-  ),
-
-  parent: optionalOfflineId,
-});
 
 export const createAssetSchema = z.object({
   name: z.string().trim().min(1, "Asset name is required"),
+  categoryId: taxonomyStringSchema,
+category: taxonomyStringSchema,
+
+typeId: taxonomyStringSchema,
+type: taxonomyStringSchema,
+
+nameId: taxonomyStringSchema,
 
   parent: optionalOfflineId,
+  rawData: z.preprocess(
+  jsonPreprocess,
+  z.any().optional()
+),
+
+normalizedData: z.preprocess(
+  jsonPreprocess,
+  z.record(z.any()).optional()
+),
+newAssetLocation: z.preprocess(
+  nullableStringTrimPreprocess,
+  z.string()
+    .max(300, "Asset location is too long")
+    .optional()
+    .nullable()
+),
 
   rawData: z.preprocess(jsonPreprocess, z.any().optional()),
 
@@ -225,10 +242,6 @@ condition: z.preprocess(
     z.enum(["vehicle", "other"]).optional()
   ),
 
- subAssetType: z.preprocess(
-  nullableStringTrimPreprocess,
-  z.string().max(80, "Sub asset type is too long").optional().nullable()
-),
 
   quantity: z.preprocess(
     numberPreprocess,
@@ -279,8 +292,28 @@ condition: z.preprocess(
 
 export const updateAssetSchema = z.object({
   name: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
+  categoryId: taxonomyStringSchema,
+  category: taxonomyStringSchema,
+
+  typeId: taxonomyStringSchema,
+  type: taxonomyStringSchema,
+
+  nameId: taxonomyStringSchema,
 
   rawData: z.preprocess(jsonPreprocess, z.any().optional()),
+
+  normalizedData: z.preprocess(
+  jsonPreprocess,
+  z.record(z.any()).optional()
+),
+
+newAssetLocation: z.preprocess(
+  nullableStringTrimPreprocess,
+  z.string()
+    .max(300, "Asset location is too long")
+    .optional()
+    .nullable()
+),
 
  condition: z.preprocess(
   nullableStringTrimPreprocess,
@@ -292,10 +325,6 @@ export const updateAssetSchema = z.object({
     z.enum(["vehicle", "other"]).optional()
   ),
 
-subAssetType: z.preprocess(
-  nullableStringTrimPreprocess,
-  z.string().max(80, "Sub asset type is too long").optional().nullable()
-),
 
   quantity: z.preprocess(
     numberPreprocess,

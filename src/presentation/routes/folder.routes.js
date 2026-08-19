@@ -9,7 +9,6 @@ import {
   createFolderSchema,
   createAssetSchema,
   updateAssetSchema,
-  renameSubAssetTypeSchema
 } from "../validators/auth.validators.js";
 
 const router = Router();
@@ -53,16 +52,11 @@ router.post(
 );
 
 router.get(
-  "/:projectId/assets/sub-asset-types",
+  "/:projectId/assets/locations",
   authenticate,
-  asyncWrap(folderAssetController.getProjectSubAssetTypes)
-);
-
-router.patch(
-  "/:projectId/assets/sub-asset-types/rename",
-  authenticate,
-  validate(renameSubAssetTypeSchema),
-  asyncWrap(folderAssetController.renameProjectSubAssetType)
+  asyncWrap(
+    folderAssetController.getProjectAssetLocations
+  )
 );
 
 router.get(
