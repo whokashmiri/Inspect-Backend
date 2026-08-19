@@ -1,10 +1,24 @@
 // models/Asset.js
+
 import mongoose from "mongoose";
+
+// -----------------------------------------------------------------------------
+// Media
+// -----------------------------------------------------------------------------
 
 const assetImageSchema = new mongoose.Schema(
   {
-    url: { type: String, required: true, trim: true },
-    publicId: { type: String, default: null, trim: true },
+    url: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    publicId: {
+      type: String,
+      default: null,
+      trim: true,
+    },
 
     mediaType: {
       type: String,
@@ -29,440 +43,712 @@ const assetImageSchema = new mongoose.Schema(
       trim: true,
     },
   },
-  { timestamps: { createdAt: "createdAt", updatedAt: false } }
+  {
+    timestamps: {
+      createdAt: "createdAt",
+      updatedAt: false,
+    },
+  },
 );
 
 const assetVoiceNoteSchema = new mongoose.Schema(
   {
-    url: { type: String, required: true, trim: true },
-    publicId: { type: String, default: null, trim: true },
-    duration: { type: Number, default: null },
+    url: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    publicId: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+
+    duration: {
+      type: Number,
+      default: null,
+    },
   },
-  { timestamps: { createdAt: "createdAt", updatedAt: false } }
+  {
+    timestamps: {
+      createdAt: "createdAt",
+      updatedAt: false,
+    },
+  },
 );
 
-// Structured image slots.
-// - Vehicle assets use: plate, details, odometer, other[]
-// - Other assets use:   details, brand, other[]
-// Slots that don't apply to the asset's current assetType are cleared
-// automatically in the pre("validate") hook below.
+// -----------------------------------------------------------------------------
+// Structured image slots
+//
+// Vehicle:
+//   plate
+//   details
+//   odometer
+//   other[]
+//
+// Other:
+//   details
+//   brand
+//   other[]
+// -----------------------------------------------------------------------------
+
 const assetImagesSchema = new mongoose.Schema(
   {
-    // Vehicle-only single-image slots
-    plate: { type: assetImageSchema, default: null },
-    odometer: { type: assetImageSchema, default: null },
+    // Vehicle only
+    plate: {
+      type: assetImageSchema,
+      default: null,
+    },
 
-    // Other-only single-image slot
-    brand: { type: assetImageSchema, default: null },
+    odometer: {
+      type: assetImageSchema,
+      default: null,
+    },
 
-    // Shared single-image slot (used by both vehicle & other assets)
-    details: { type: assetImageSchema, default: null },
+    // Other only
+      main: {
+      type: assetImageSchema,
+      default: null,
+    },
+    brand: {
+      type: assetImageSchema,
+      default: null,
+    },
 
-    // Shared multi-image slot (used by both vehicle & other assets)
-    other: { type: [assetImageSchema], default: [] },
+    // Shared
+    details: {
+      type: assetImageSchema,
+      default: null,
+    },
+
+    other: {
+      type: [assetImageSchema],
+      default: [],
+    },
   },
-  { _id: false }
+  {
+    _id: false,
+  },
 );
 
-const escapeRegex = (value = "") =>
-  String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
+
 
 const normalizeText = (value) => {
-  const text = typeof value === "string" ? value.trim() : "";
+  const text =
+    typeof value === "string"
+      ? value.trim()
+      : "";
+
   return text || null;
 };
 
-const normalizeSubAssetType = (value) => {
-  const text = typeof value === "string" ? value.trim().toLowerCase() : "";
+
+const normalizeTaxonomyId = (value) => {
+  const text =
+    typeof value === "string"
+      ? value.trim()
+      : "";
+
   return text || null;
 };
 
 const toObjectId = (value) => {
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
 
-  if (value instanceof mongoose.Types.ObjectId) {
+  if (
+    value instanceof
+    mongoose.Types.ObjectId
+  ) {
     return value;
   }
 
-  if (mongoose.Types.ObjectId.isValid(String(value))) {
-    return new mongoose.Types.ObjectId(String(value));
+  if (
+    mongoose.Types.ObjectId.isValid(
+      String(value),
+    )
+  ) {
+    return new mongoose.Types.ObjectId(
+      String(value),
+    );
   }
 
   return null;
 };
 
-const assetSchema = new mongoose.Schema(
-  {
-    assetId: {
-      type: String,
-      default: function () {
-        return this._id?.toString();
+// -----------------------------------------------------------------------------
+// Asset
+// -----------------------------------------------------------------------------
+
+const assetSchema =
+  new mongoose.Schema(
+    {
+      assetId: {
+        type: String,
+
+        default: function () {
+          return this._id?.toString();
+        },
+      },
+
+      // -----------------------------------------------------------------------
+      // Asset identity
+      // -----------------------------------------------------------------------
+
+      name: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+
+      condition: {
+        type: String,
+        default: "Good",
+        trim: true,
+        index: true,
+      },
+
+      // -----------------------------------------------------------------------
+      // Main asset classification
+      //
+      // vehicle = current vehicle flow
+      // other   = AssetGallery taxonomy flow
+      // -----------------------------------------------------------------------
+
+      assetType: {
+        type: String,
+        enum: ["vehicle", "other"],
+        default: "other",
+        lowercase: true,
+        trim: true,
+        index: true,
+      },
+
+      // -----------------------------------------------------------------------
+      // NEW TAXONOMY FIELDS
+      //
+      // These come from AssetGalleryScreen:
+      //
+      // categoryId
+      // category
+      // typeId
+      // type
+      // nameId
+      //
+      // name already exists above and stores the selected/editable asset name.
+      // -----------------------------------------------------------------------
+
+      categoryId: {
+        type: String,
+        default: null,
+        trim: true,
+        index: true,
+      },
+
+      category: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      typeId: {
+        type: String,
+        default: null,
+        trim: true,
+        index: true,
+      },
+
+      type: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      nameId: {
+        type: String,
+        default: null,
+        trim: true,
+        index: true,
+      },
+
+      // -----------------------------------------------------------------------
+      // Legacy / compatibility field
+      //
+      // Existing code still uses subAssetType.
+      //
+      // For "other" assets we will synchronize this with taxonomy `type`
+      // where possible.
+      // -----------------------------------------------------------------------
+
+ 
+
+      quantity: {
+        type: Number,
+        default: 1,
+        min: 1,
+      },
+
+      // -----------------------------------------------------------------------
+      // Vehicle only
+      // -----------------------------------------------------------------------
+
+      brand: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      model: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      manufactureYear: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      kilometersDriven: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      // -----------------------------------------------------------------------
+      // General fields
+      // -----------------------------------------------------------------------
+
+      code: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+
+      rawData: {
+        type:
+          mongoose.Schema.Types.Mixed,
+        default: {},
+      },
+
+      normalizedData: {
+  type: mongoose.Schema.Types.Mixed,
+  default: {},
+},
+
+newAssetLocation: {
+  type: String,
+  default: null,
+  trim: true,
+},
+
+      isPresent: {
+        type: Boolean,
+        default: true,
+      },
+
+      projectId: {
+        type:
+          mongoose.Schema.Types
+            .ObjectId,
+
+        ref: "Project",
+        required: true,
+        index: true,
+      },
+
+      parent: {
+        type:
+          mongoose.Schema.Types
+            .ObjectId,
+
+        ref: "Folder",
+        default: null,
+        index: true,
+      },
+
+      isAssetFolder: {
+        type: Boolean,
+        default: true,
+      },
+
+      createdBy: {
+        type:
+          mongoose.Schema.Types
+            .ObjectId,
+
+        ref: "User",
+        required: true,
+        index: true,
+      },
+
+      // -----------------------------------------------------------------------
+      // Media
+      // -----------------------------------------------------------------------
+
+      images: {
+        type: assetImagesSchema,
+        default: () => ({}),
+      },
+
+      voiceNotes: {
+        type: [assetVoiceNoteSchema],
+        default: [],
+      },
+
+      // -----------------------------------------------------------------------
+      // Status / notes
+      // -----------------------------------------------------------------------
+
+      isDone: {
+        type: Boolean,
+        default: false,
+      },
+
+      hasNotes: {
+        type: Boolean,
+        default: false,
+      },
+
+      notes: {
+        type: String,
+        default: null,
+        trim: true,
       },
     },
-
-    name: {
-      type: String,
-      required: true,
-      trim: true,
+    {
+      timestamps: true,
     },
+  );
 
-    condition: {
-      type: String,
-      default: "Good",
-      trim: true,
-      index: true,
-    },
+// -----------------------------------------------------------------------------
+// Normalize before validation
+// -----------------------------------------------------------------------------
 
-    // Main category: Vehicle or Other
-    assetType: {
-      type: String,
-      enum: ["vehicle", "other"],
-      default: "other",
-      lowercase: true,
-      trim: true,
-      index: true,
-    },
+assetSchema.pre(
+  "validate",
+  function (next) {
+    const assetType = String(
+      this.assetType || "other",
+    )
+      .trim()
+      .toLowerCase();
 
-    // Sub asset type: sofa, chair, tv, etc.
-    subAssetType: {
-      type: String,
-      default: null,
-      trim: true,
-      lowercase: true,
-      index: true,
-    },
+    this.assetType =
+      assetType === "vehicle"
+        ? "vehicle"
+        : "other";
 
-    quantity: {
-      type: Number,
-      default: 1,
-      min: 1,
-    },
+    // -------------------------------------------------------------------------
+    // General normalization
+    // -------------------------------------------------------------------------
 
-    // Vehicle-only fields
-    brand: {
-      type: String,
-      default: null,
-      trim: true,
-    },
+    const nameText =
+      normalizeText(this.name);
 
-    model: {
-      type: String,
-      default: null,
-      trim: true,
-    },
+    if (nameText) {
+      this.name = nameText;
+    }
 
-    manufactureYear: {
-      type: String,
-      default: null,
-      trim: true,
-    },
+    const conditionText =
+      normalizeText(
+        this.condition,
+      );
 
-    kilometersDriven: {
-      type: String,
-      default: null,
-      trim: true,
-    },
+    this.condition =
+      conditionText || "Good";
 
-    code: {
-      type: String,
-      default: null,
-      trim: true,
-    },
+    const notesText =
+      normalizeText(this.notes);
 
-    rawData: {
-      type: mongoose.Schema.Types.Mixed,
-      default: {},
-    },
+    this.notes = notesText;
+    this.hasNotes = !!notesText;
 
-    isPresent: {
-      type: Boolean,
-      default: true,
-    },
+    this.newAssetLocation =
+  normalizeText(
+    this.newAssetLocation,
+  );
 
-    projectId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Project",
-      required: true,
-      index: true,
-    },
+    const quantity = Number(
+      this.quantity,
+    );
 
-    parent: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Folder",
-      default: null,
-      index: true,
-    },
+    if (
+      !Number.isFinite(quantity) ||
+      quantity < 1
+    ) {
+      this.quantity = 1;
+    } else {
+      this.quantity =
+        Math.floor(quantity);
+    }
 
-    isAssetFolder: {
-      type: Boolean,
-      default: true,
-    },
+    // -------------------------------------------------------------------------
+    // Images
+    // -------------------------------------------------------------------------
 
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    },
+    if (!this.images) {
+      this.images = {};
+    }
 
-    // Structured, type-specific image slots (see assetImagesSchema above)
-    images: {
-      type: assetImagesSchema,
-      default: () => ({}),
-    },
+    // -------------------------------------------------------------------------
+    // Vehicle
+    // -------------------------------------------------------------------------
 
-    voiceNotes: {
-      type: [assetVoiceNoteSchema],
-      default: [],
-    },
+    if (
+      this.assetType ===
+      "vehicle"
+    ) {
+      this.quantity = 1;
 
-    isDone: {
-      type: Boolean,
-      default: false,
-    },
 
-    hasNotes: {
-      type: Boolean,
-      default: false,
-    },
+      // Vehicle doesn't use AssetGallery taxonomy.
+      this.categoryId = null;
+      this.category = null;
 
-    notes: {
-      type: String,
-      default: null,
-      trim: true,
-    },
-  },
-  { timestamps: true }
-);
+      this.typeId = null;
+      this.type = null;
 
-// Normalize asset before save/update validation
-assetSchema.pre("validate", function (next) {
-  const assetType = String(this.assetType || "other").trim().toLowerCase();
+      this.nameId = null;
 
-  this.assetType = assetType === "vehicle" ? "vehicle" : "other";
+      // Other-only image slot.
+      this.images.brand = null;
 
-  const conditionText = normalizeText(this.condition);
-  this.condition = conditionText || "Good";
+      next();
+      return;
+    }
 
-  const notesText = normalizeText(this.notes);
-  this.notes = notesText;
-  this.hasNotes = !!notesText;
+    // -------------------------------------------------------------------------
+    // Other asset
+    // -------------------------------------------------------------------------
 
-  const quantity = Number(this.quantity);
-
-  if (!Number.isFinite(quantity) || quantity < 1) {
-    this.quantity = 1;
-  } else {
-    this.quantity = Math.floor(quantity);
-  }
-
-  // Ensure the images sub-object always exists before we start
-  // clearing/setting slots on it.
-  if (!this.images) {
-    this.images = {};
-  }
-
-  if (this.assetType === "vehicle") {
-    this.quantity = 1;
-    this.subAssetType = "vehicle";
-
-    // Vehicle assets don't use the "brand" image slot (that's for "other" assets)
-    this.images.brand = null;
-  } else {
     this.brand = null;
     this.model = null;
-    this.manufactureYear = null;
-    this.kilometersDriven = null;
-    this.subAssetType = normalizeSubAssetType(this.subAssetType);
 
-    // "Other" assets don't use the vehicle-only image slots
+    this.manufactureYear =
+      null;
+
+    this.kilometersDriven =
+      null;
+
+    // Normalize taxonomy IDs.
+    this.categoryId =
+      normalizeTaxonomyId(
+        this.categoryId,
+      );
+
+    this.typeId =
+      normalizeTaxonomyId(
+        this.typeId,
+      );
+
+    this.nameId =
+      normalizeTaxonomyId(
+        this.nameId,
+      );
+
+    // Preserve taxonomy labels exactly except trimming.
+    this.category =
+      normalizeText(
+        this.category,
+      );
+
+    this.type =
+      normalizeText(this.type);
+
+    // Other assets don't use vehicle-only slots.
     this.images.plate = null;
-    this.images.odometer = null;
-  }
+    this.images.odometer =
+      null;
 
-  next();
-});
-
-// unique code inside one project only when code exists and is not null/empty
-assetSchema.index(
-  { projectId: 1, code: 1 },
-  {
-    unique: true,
-    partialFilterExpression: {
-      code: { $type: "string", $ne: "" },
-    },
-  }
+    next();
+  },
 );
 
-// useful dropdown / filtering indexes
-assetSchema.index({ projectId: 1, condition: 1 });
-assetSchema.index({ projectId: 1, subAssetType: 1 });
-assetSchema.index({ projectId: 1, assetType: 1, subAssetType: 1 });
-assetSchema.index({ projectId: 1, parent: 1, subAssetType: 1 });
-assetSchema.index({ projectId: 1, parent: 1, condition: 1 });
+// -----------------------------------------------------------------------------
+// Indexes
+// -----------------------------------------------------------------------------
 
-assetSchema.statics.getUniqueConditionsByProject = async function (projectId) {
-  const objectProjectId = toObjectId(projectId);
-  if (!objectProjectId) return [];
+// Unique code within project only when code exists.
+assetSchema.index(
+  {
+    projectId: 1,
+    code: 1,
+  },
+  {
+    unique: true,
 
-  const rows = await this.aggregate([
-    {
-      $match: {
-        projectId: objectProjectId,
-        condition: { $type: "string", $ne: "" },
+    partialFilterExpression: {
+      code: {
+        $type: "string",
+        $ne: "",
       },
     },
-    {
-      $project: {
-        condition: { $trim: { input: "$condition" } },
-      },
-    },
-    {
-      $match: {
-        condition: { $ne: "" },
-      },
-    },
-    {
-      $group: {
-        _id: { $toLower: "$condition" },
-        label: { $first: "$condition" },
-        count: { $sum: 1 },
-      },
-    },
-    {
-      $sort: {
-        label: 1,
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        value: "$label",
-        label: "$label",
-        count: 1,
-      },
-    },
-  ]);
+  },
+);
 
-  return rows;
-};
+// Existing indexes
+assetSchema.index({
+  projectId: 1,
+  condition: 1,
+});
 
-assetSchema.statics.getUniqueSubAssetTypesByProject = async function (
-  projectId,
-  options = {}
-) {
-  const objectProjectId = toObjectId(projectId);
-  if (!objectProjectId) return [];
 
-  const match = {
-    projectId: objectProjectId,
-    assetType: "other",
-    subAssetType: { $type: "string", $ne: "" },
+
+assetSchema.index({
+  projectId: 1,
+  parent: 1,
+  condition: 1,
+});
+
+// -----------------------------------------------------------------------------
+// NEW taxonomy indexes
+// -----------------------------------------------------------------------------
+
+assetSchema.index({
+  projectId: 1,
+  categoryId: 1,
+});
+
+assetSchema.index({
+  projectId: 1,
+  typeId: 1,
+});
+
+assetSchema.index({
+  projectId: 1,
+  nameId: 1,
+});
+
+assetSchema.index({
+  projectId: 1,
+  categoryId: 1,
+  typeId: 1,
+});
+
+assetSchema.index({
+  projectId: 1,
+  newAssetLocation: 1,
+});
+assetSchema.index({
+  projectId: 1,
+  parent: 1,
+  newAssetLocation: 1,
+});
+
+assetSchema.index({
+  projectId: 1,
+  "normalizedData.asset_location": 1,
+});
+assetSchema.index({
+  projectId: 1,
+  parent: 1,
+  categoryId: 1,
+  typeId: 1,
+});
+
+// -----------------------------------------------------------------------------
+// Unique conditions
+// -----------------------------------------------------------------------------
+
+assetSchema.statics.getUniqueConditionsByProject =
+  async function (
+    projectId,
+  ) {
+    const objectProjectId =
+      toObjectId(projectId);
+
+    if (!objectProjectId) {
+      return [];
+    }
+
+    const rows =
+      await this.aggregate([
+        {
+          $match: {
+            projectId:
+              objectProjectId,
+
+            condition: {
+              $type: "string",
+              $ne: "",
+            },
+          },
+        },
+
+        {
+          $project: {
+            condition: {
+              $trim: {
+                input:
+                  "$condition",
+              },
+            },
+          },
+        },
+
+        {
+          $match: {
+            condition: {
+              $ne: "",
+            },
+          },
+        },
+
+        {
+          $group: {
+            _id: {
+              $toLower:
+                "$condition",
+            },
+
+            label: {
+              $first:
+                "$condition",
+            },
+
+            count: {
+              $sum: 1,
+            },
+          },
+        },
+
+        {
+          $sort: {
+            label: 1,
+          },
+        },
+
+        {
+          $project: {
+            _id: 0,
+
+            value: "$label",
+
+            label: "$label",
+
+            count: 1,
+          },
+        },
+      ]);
+
+    return rows;
   };
 
-  if (options.parent !== undefined) {
-    match.parent = options.parent ? toObjectId(options.parent) : null;
-  }
 
-  const rows = await this.aggregate([
-    {
-      $match: match,
-    },
-    {
-      $project: {
-        subAssetType: { $trim: { input: "$subAssetType" } },
-      },
-    },
-    {
-      $match: {
-        subAssetType: { $ne: "" },
-      },
-    },
-    {
-      $group: {
-        _id: { $toLower: "$subAssetType" },
-        label: { $first: "$subAssetType" },
-        count: { $sum: 1 },
-      },
-    },
-    {
-      $sort: {
-        label: 1,
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        value: "$_id",
-        label: "$label",
-        count: 1,
-      },
-    },
-  ]);
-
-  return rows;
-};
-
-assetSchema.statics.renameSubAssetTypeInProject = async function ({
-  projectId,
-  oldSubAssetType,
-  newSubAssetType,
-  parent,
-}) {
-  const objectProjectId = toObjectId(projectId);
-
-  if (!objectProjectId) {
-    throw new Error("projectId is required.");
-  }
-
-  const oldValue = normalizeSubAssetType(oldSubAssetType);
-  const newValue = normalizeSubAssetType(newSubAssetType);
-
-  if (!oldValue) {
-    throw new Error("Old sub asset type is required.");
-  }
-
-  if (!newValue) {
-    throw new Error("New sub asset type is required.");
-  }
-
-  if (oldValue === newValue) {
-    return {
-      matchedCount: 0,
-      modifiedCount: 0,
-      unchanged: true,
-      oldSubAssetType: oldValue,
-      newSubAssetType: newValue,
-    };
-  }
-
-  const query = {
-    projectId: objectProjectId,
-    assetType: "other",
-    subAssetType: {
-      $regex: `^${escapeRegex(oldValue)}$`,
-      $options: "i",
-    },
-  };
-
-  if (parent !== undefined) {
-    query.parent = parent ? toObjectId(parent) : null;
-  }
-
-  const result = await this.updateMany(query, {
-    $set: {
-      subAssetType: newValue,
-    },
-  });
-
-  return {
-    matchedCount: result.matchedCount ?? result.n ?? 0,
-    modifiedCount: result.modifiedCount ?? result.nModified ?? 0,
-    unchanged: false,
-    oldSubAssetType: oldValue,
-    newSubAssetType: newValue,
-  };
-};
+// -----------------------------------------------------------------------------
+// Export
+// -----------------------------------------------------------------------------
 
 export const Asset =
-  mongoose.models.assets || mongoose.model("assets", assetSchema);
+  mongoose.models.assets ||
+  mongoose.model(
+    "assets",
+    assetSchema,
+  );
