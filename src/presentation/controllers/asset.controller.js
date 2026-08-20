@@ -545,6 +545,8 @@ async advancedGetRawDataKeys(req, res) {
   return res.status(200).json(result);
 },
 
+
+
 async getProjectAssetLocations(req, res) {
   const result =
     await folderAssetService.getProjectAssetLocations({
@@ -554,6 +556,27 @@ async getProjectAssetLocations(req, res) {
         req.query.parent === undefined
           ? undefined
           : req.query.parent || null,
+    });
+
+  return res.status(200).json(result);
+},
+
+async getRecentAssets(req, res) {
+  const result =
+    await folderAssetService.getRecentAssets({
+      userId: req.userId,
+      projectId: req.params.projectId,
+      limit: Number(req.query.limit || 8),
+    });
+
+  return res.status(200).json(result);
+},
+
+async markAssetUsed(req, res) {
+  const result =
+    await folderAssetService.markAssetUsed({
+      userId: req.userId,
+      assetId: req.params.assetId,
     });
 
   return res.status(200).json(result);
