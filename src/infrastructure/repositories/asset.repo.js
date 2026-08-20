@@ -122,6 +122,8 @@ newAssetLocation: doc.newAssetLocation ?? null,
   createdAt: doc.createdAt,
   updatedAt: doc.updatedAt,
 
+  updatedAt: doc.updatedAt ?? null,
+
   createdBy: mapCreatedBy(doc.createdBy),
 
   images: mapImages(doc.images || {}),
@@ -312,6 +314,9 @@ newAssetLocation: normalizedNewAssetLocation,
 
       rawData: finalRawData,
 
+  updatedAt:
+    new Date(),
+
       projectId,
       parent: parent || null,
       createdBy,
@@ -359,6 +364,66 @@ notes: normalizedNotes.notes,
     return assets.map(mapAsset);
   },
 
+  async getRecentAssets(
+  projectId,
+  limit = 20,
+) {
+  const safeLimit = Math.min(
+    Math.max(
+      Number(limit) || 20,
+      1,
+    ),
+    30,
+  );
+
+  const assets =
+    await Asset.find({
+      projectId,
+      assetType: "other",
+
+      updatedAt: {
+        $ne: null,
+      },
+    })
+      .sort({
+        updatedAt: -1,
+        updatedAt: -1,
+      })
+      .limit(safeLimit)
+      .populate(
+        "createdBy",
+        "fullName email role",
+      )
+      .lean();
+
+  return assets.map(mapAsset);
+},
+
+
+async markAssetUsed(assetId) {
+  const asset =
+    await Asset.findByIdAndUpdate(
+      assetId,
+      {
+        $set: {
+          updatedAt:
+            new Date(),
+        },
+      },
+      {
+        new: true,
+      },
+    )
+      .populate(
+        "createdBy",
+        "fullName email role",
+      )
+      .lean();
+
+  return asset
+    ? mapAsset(asset)
+    : null;
+},
  
 async updateById(assetId, updates) {
   const asset = await Asset.findById(assetId);
