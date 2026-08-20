@@ -142,17 +142,6 @@ function sanitizeVoiceNotes(voiceNotes = []) {
     }));
 }
 
-// --- Image helpers -------------------------------------------------------
-// Images are now stored as a structured object rather than a flat array:
-//   Vehicle assets: { plate, details, odometer, other[] }
-//   Other assets:   { details, brand, other[] }
-// (Whichever slots don't apply to the asset's assetType get cleared by the
-// model's pre("validate") hook on save, so this layer doesn't need to know
-// assetType to do its job.)
-
-// Sanitizes a single image object (used for plate/details/odometer/brand
-// and for each item inside "other"). Mirrors the previous per-item logic
-// that used to run over the old flat array.
 function sanitizeSingleImage(item) {
   if (!item || typeof item !== "object") return null;
 
@@ -209,7 +198,7 @@ if ("main" in images) {
 }
 
 
-// Builds a fully-shaped images object for a brand-new asset.
+
 function buildFullImages(images) {
   const partial = sanitizeImagesPartial(images);
 
@@ -223,12 +212,6 @@ function buildFullImages(images) {
   };
 }
 
-// Merges an incoming (possibly partial) images payload into the asset's
-// existing images:
-//  - single-image slots (plate/details/odometer/brand) are REPLACED when
-//    provided (re-uploading a slot's photo swaps it, it doesn't stack)
-//  - the "other" array is MERGED without duplicates when provided
-//  - any slot not present in the incoming payload is left untouched
 function mergeImages(existingImages = {}, incomingImages) {
   if (incomingImages === undefined) return existingImages;
 
@@ -484,6 +467,83 @@ newAssetLocation: normalizedNewAssetLocation,
 
   return {
     locations,
+  };
+},
+
+
+async getRecentAssets({
+  userId,
+  projectId,
+  limit,
+}) {
+  const user =
+    await userRepository.findById(
+      userId,
+    );
+
+  if (!user) {
+    throw new AppError(
+      "User not found",
+      404,
+    );
+  }
+
+  await getAccessibleProject(
+    projectId,
+    user,
+  );
+
+  const assets =
+    await assetRepository.getRecentAssets(
+      projectId,
+      limit,
+    );
+
+  return {
+    assets,
+  };
+},
+
+async markAssetUsed({
+  userId,
+  assetId,
+}) {
+  const user =
+    await userRepository.findById(
+      userId,
+    );
+
+  if (!user) {
+    throw new AppError(
+      "User not found",
+      404,
+    );
+  }
+
+  const existingAsset =
+    await assetRepository.findById(
+      assetId,
+    );
+
+  if (!existingAsset) {
+    throw new AppError(
+      "Asset not found",
+      404,
+    );
+  }
+
+  await getAccessibleProject(
+    existingAsset.projectId,
+    user,
+  );
+
+  const asset =
+    await assetRepository.markAssetUsed(
+      assetId,
+    );
+
+  return {
+    asset,
   };
 },
 
