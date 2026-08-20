@@ -348,6 +348,12 @@ newAssetLocation: {
   trim: true,
 },
 
+updatedAt: {
+  type: Date,
+  default: null,
+  index: true,
+},
+
       isPresent: {
         type: Boolean,
         default: true,
@@ -607,6 +613,10 @@ assetSchema.index({
   condition: 1,
 });
 
+assetSchema.index({
+  projectId: 1,
+  updatedAt: -1,
+});
 // -----------------------------------------------------------------------------
 // NEW taxonomy indexes
 // -----------------------------------------------------------------------------
