@@ -66,6 +66,14 @@ router.get(
 );
 
 router.get(
+  "/:projectId/assets/recent",
+  authenticate,
+  asyncWrap(
+    folderAssetController.getRecentAssets
+  )
+);
+
+router.get(
   "/:projectId/assets/by-code",
   authenticate,
   asyncWrap(folderAssetController.getAssetByCode)
@@ -78,6 +86,13 @@ router.patch(
   asyncWrap(folderAssetController.updateAsset)
 );
 
+router.patch(
+  "/:projectId/assets/:assetId/used",
+  authenticate,
+  asyncWrap(
+    folderAssetController.markAssetUsed,
+  ),
+);
 router.delete(
   "/assets/:assetId",
   authenticate,
