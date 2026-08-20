@@ -218,10 +218,10 @@ nameId: taxonomyStringSchema,
   z.any().optional()
 ),
 
-normalizedData: z.preprocess(
-  jsonPreprocess,
-  z.record(z.any()).optional()
-),
+// normalizedData: z.preprocess(
+//   jsonPreprocess,
+//   z.record(z.any()).optional()
+// ),
 newAssetLocation: z.preprocess(
   nullableStringTrimPreprocess,
   z.string()
@@ -302,10 +302,10 @@ export const updateAssetSchema = z.object({
 
   rawData: z.preprocess(jsonPreprocess, z.any().optional()),
 
-  normalizedData: z.preprocess(
-  jsonPreprocess,
-  z.record(z.any()).optional()
-),
+//   normalizedData: z.preprocess(
+//   jsonPreprocess,
+//   z.record(z.any()).optional()
+// ),
 
 newAssetLocation: z.preprocess(
   nullableStringTrimPreprocess,
