@@ -260,6 +260,13 @@ function mergeMediaWithoutDuplicates(existingItems = [], incomingItems = []) {
 
   return result;
 }
+
+      function buildAssetDescription(category, type, name) {
+  return [category, type, name]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .join(" / ");
+}
 export const folderAssetService = {
   async createFolder({ userId, projectId, parentId, name }) {
     if (!name?.trim()) throw new AppError("Folder name is required", 400);
@@ -290,6 +297,8 @@ await touchProjectSync(projectId, "folder_created");
 
 return { folder };
   },
+
+
 
  async createAsset({
   userId,
@@ -340,6 +349,8 @@ newAssetLocation,
 
     const normalizedAssetType = normalizeAssetType(assetType);
 
+
+
     
     const normalizedCategoryId =
   normalizedAssetType === "other"
@@ -364,6 +375,17 @@ const normalizedType =
 const normalizedNameId =
   normalizedAssetType === "other"
     ? normalizeTaxonomyField(nameId)
+    : null;
+
+ const normalizedName = name.trim();
+
+const assetDescription =
+  normalizedAssetType === "other"
+    ? buildAssetDescription(
+        normalizedCategory,
+        normalizedType,
+        normalizedName,
+      )
     : null;
     
     const normalizedCondition = normalizeCondition(condition);
@@ -401,7 +423,8 @@ const finalRawData = cleanRawData(incomingRawData);
 
     
    const asset = await assetRepository.create({
-  name: name.trim(),
+  name: normalizedName,
+  asset_description: assetDescription,
   condition: normalizedCondition,
   assetType: normalizedAssetType,
 
@@ -589,9 +612,10 @@ async updateAsset({
   typeId,
   type,
   nameId,
+
   assetType,
   normalizedData,
-newAssetLocation,
+  newAssetLocation,
   quantity,
   rawData,
   brand,
@@ -605,204 +629,264 @@ newAssetLocation,
   images,
   voiceNotes,
 }) {
-    const user = await userRepository.findById(userId);
-    if (!user) throw new AppError("User not found", 404);
-    // if (!user.company?.id) {
-    //   throw new AppError("User is not linked to a company", 400);
-    // }
+  const user = await userRepository.findById(userId);
 
-    const existingAsset = await assetRepository.findById(assetId);
-    if (!existingAsset) {
-      throw new AppError("Asset not found", 404);
-    }
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
 
-    await getAccessibleProject(existingAsset.projectId, user);
+  const existingAsset = await assetRepository.findById(assetId);
 
-const currentUserId = String(user.id || user._id);
-const assetCreatorId = existingAsset.createdBy?.id?.toString();
-const isCreator = assetCreatorId === currentUserId;
+  if (!existingAsset) {
+    throw new AppError("Asset not found", 404);
+  }
 
+  await getAccessibleProject(existingAsset.projectId, user);
 
-    const nextAssetType =
-      assetType === undefined
-        ? normalizeAssetType(existingAsset.assetType)
-        : normalizeAssetType(assetType);
+  const currentUserId = String(user.id || user._id);
+  const assetCreatorId = existingAsset.createdBy?.id?.toString();
 
-        const nextCategoryId =
-  nextAssetType === "vehicle"
-    ? null
-    : categoryId === undefined
-      ? existingAsset.categoryId ?? null
-      : normalizeTaxonomyField(categoryId);
+  const isCreator = assetCreatorId === currentUserId;
 
-const nextCategory =
-  nextAssetType === "vehicle"
-    ? null
-    : category === undefined
-      ? existingAsset.category ?? null
-      : normalizeTaxonomyField(category);
+  // ---------------------------------------------------------
+  // Asset type
+  // ---------------------------------------------------------
 
-const nextTypeId =
-  nextAssetType === "vehicle"
-    ? null
-    : typeId === undefined
-      ? existingAsset.typeId ?? null
-      : normalizeTaxonomyField(typeId);
+  const nextAssetType =
+    assetType === undefined
+      ? normalizeAssetType(existingAsset.assetType)
+      : normalizeAssetType(assetType);
 
-const nextType =
-  nextAssetType === "vehicle"
-    ? null
-    : type === undefined
-      ? existingAsset.type ?? null
-      : normalizeTaxonomyField(type);
+  // ---------------------------------------------------------
+  // Final name
+  // ---------------------------------------------------------
 
-const nextNameId =
-  nextAssetType === "vehicle"
-    ? null
-    : nameId === undefined
-      ? existingAsset.nameId ?? null
-      : normalizeTaxonomyField(nameId);
-
-    const normalizedCondition = normalizeCondition(condition);
-    const normalizedCode = normalizeOptionalString(code);
-
-    const incomingRawData =
-  rawData && typeof rawData === "object" && !Array.isArray(rawData)
-    ? rawData
-    : existingAsset.rawData || {};
-
-const cleanedIncomingRawData = cleanRawData(incomingRawData);
-
-const nextQuantity =
-  quantity === undefined
-    ? existingAsset.quantity || 1
-    : normalizeQuantity(quantity);
-
-const nextNormalizedData =
-  normalizedData === undefined
-    ? existingAsset.normalizedData || {}
-    : cleanNormalizedData(normalizedData);
-
-const nextNewAssetLocation =
-  nextAssetType === "vehicle"
-    ? null
-    : newAssetLocation === undefined
-      ? existingAsset.newAssetLocation ?? null
-      : normalizeLocation(newAssetLocation);
-
-const normalizedNotes =
-  notes === undefined
-    ? {
-        notes: existingAsset.notes,
-        hasNotes: !!existingAsset.notes?.trim?.(),
-      }
-    : normalizeNotes(notes);
-
-  
-// images comes back from findById already in the structured
-// { plate, details, odometer, brand, other[] } shape (see asset.repo.js
-// mapImages). mergeImages replaces single slots that were provided and
-// merges the "other" array without duplicates; anything not sent in this
-// request is left as-is.
-const nextImages = mergeImages(existingAsset.images || {}, images);
-
-const existingVoiceNotes = sanitizeVoiceNotes(existingAsset.voiceNotes || []);
-const incomingVoiceNotes =
-  voiceNotes === undefined ? undefined : sanitizeVoiceNotes(voiceNotes);
-
-const nextVoiceNotes =
-  incomingVoiceNotes === undefined
-    ? existingVoiceNotes
-    : mergeMediaWithoutDuplicates(existingVoiceNotes, incomingVoiceNotes);;
-
-const nextRawData = cleanedIncomingRawData;
-
-const updatedAsset = await assetRepository.updateById(assetId, {
-  name:
+  const nextName =
     !isCreator
       ? existingAsset.name
       : name === undefined
-      ? existingAsset.name
-      : name?.trim() || existingAsset.name,
+        ? existingAsset.name
+        : name?.trim() || existingAsset.name;
 
-  condition:
-    condition === undefined
-      ? existingAsset.condition
-      : normalizedCondition,
+  // ---------------------------------------------------------
+  // Taxonomy
+  // ---------------------------------------------------------
 
-  assetType:
-    assetType === undefined
-      ? existingAsset.assetType
-      : nextAssetType,
+  const nextCategoryId =
+    nextAssetType === "vehicle"
+      ? null
+      : categoryId === undefined
+        ? existingAsset.categoryId ?? null
+        : normalizeTaxonomyField(categoryId);
 
-    categoryId: nextCategoryId,
-  category: nextCategory,
+  const nextCategory =
+    nextAssetType === "vehicle"
+      ? null
+      : category === undefined
+        ? existingAsset.category ?? null
+        : normalizeTaxonomyField(category);
 
-  typeId: nextTypeId,
-  type: nextType,
+  const nextTypeId =
+    nextAssetType === "vehicle"
+      ? null
+      : typeId === undefined
+        ? existingAsset.typeId ?? null
+        : normalizeTaxonomyField(typeId);
 
-  nameId: nextNameId,
+  const nextType =
+    nextAssetType === "vehicle"
+      ? null
+      : type === undefined
+        ? existingAsset.type ?? null
+        : normalizeTaxonomyField(type);
 
-  normalizedData: nextNormalizedData,
-newAssetLocation: nextNewAssetLocation,
-  quantity: nextQuantity,
-  rawData: nextRawData,
+  const nextNameId =
+    nextAssetType === "vehicle"
+      ? null
+      : nameId === undefined
+        ? existingAsset.nameId ?? null
+        : normalizeTaxonomyField(nameId);
 
-  brand:
-    brand === undefined
-      ? existingAsset.brand
-      : nextAssetType === "vehicle"
-      ? brand?.trim() || null
-      : null,
+  // ---------------------------------------------------------
+  // Derived asset description
+  // ---------------------------------------------------------
 
-  model:
-    model === undefined
-      ? existingAsset.model
-      : nextAssetType === "vehicle"
-      ? model?.trim() || null
-      : null,
+  const nextAssetDescription =
+    nextAssetType === "other"
+      ? buildAssetDescription(
+          nextCategory,
+          nextType,
+          nextName,
+        )
+      : null;
 
-  code:
-    code === undefined
-      ? existingAsset.code
-      : normalizedCode,
+  // ---------------------------------------------------------
+  // General fields
+  // ---------------------------------------------------------
 
-  manufactureYear:
-    manufactureYear === undefined
-      ? existingAsset.manufactureYear
-      : nextAssetType === "vehicle"
-      ? manufactureYear?.trim() || null
-      : null,
+  const normalizedCondition = normalizeCondition(condition);
+  const normalizedCode = normalizeOptionalString(code);
 
-  kilometersDriven:
-    kilometersDriven === undefined
-      ? existingAsset.kilometersDriven
-      : nextAssetType === "vehicle"
-      ? kilometersDriven?.trim() || null
-      : null,
+  const incomingRawData =
+    rawData &&
+    typeof rawData === "object" &&
+    !Array.isArray(rawData)
+      ? rawData
+      : existingAsset.rawData || {};
 
-  hasNotes: normalizedNotes.hasNotes,
-  notes: normalizedNotes.notes,
+  const nextRawData = cleanRawData(incomingRawData);
 
-  isDone:
-    isDone === undefined
-      ? existingAsset.isDone
-      : isDone,
+  const nextQuantity =
+    quantity === undefined
+      ? existingAsset.quantity || 1
+      : normalizeQuantity(quantity);
 
-  isPresent:
-    isPresent === undefined
-      ? existingAsset.isPresent
-      : isPresent,
+  const nextNormalizedData =
+    normalizedData === undefined
+      ? existingAsset.normalizedData || {}
+      : cleanNormalizedData(normalizedData);
 
-  images: nextImages,
-  voiceNotes: nextVoiceNotes,
-});
+  const nextNewAssetLocation =
+    nextAssetType === "vehicle"
+      ? null
+      : newAssetLocation === undefined
+        ? existingAsset.newAssetLocation ?? null
+        : normalizeLocation(newAssetLocation);
 
-    await touchProjectSync(existingAsset.projectId, "asset_updated");
+  const normalizedNotes =
+    notes === undefined
+      ? {
+          notes: existingAsset.notes,
+          hasNotes: !!existingAsset.notes?.trim?.(),
+        }
+      : normalizeNotes(notes);
 
-    return { asset: updatedAsset };
-  },
+  // ---------------------------------------------------------
+  // Media
+  // ---------------------------------------------------------
 
+  const nextImages = mergeImages(
+    existingAsset.images || {},
+    images,
+  );
+
+  const existingVoiceNotes = sanitizeVoiceNotes(
+    existingAsset.voiceNotes || [],
+  );
+
+  const incomingVoiceNotes =
+    voiceNotes === undefined
+      ? undefined
+      : sanitizeVoiceNotes(voiceNotes);
+
+  const nextVoiceNotes =
+    incomingVoiceNotes === undefined
+      ? existingVoiceNotes
+      : mergeMediaWithoutDuplicates(
+          existingVoiceNotes,
+          incomingVoiceNotes,
+        );
+
+  // ---------------------------------------------------------
+  // Update
+  // ---------------------------------------------------------
+
+  const updatedAsset = await assetRepository.updateById(
+    assetId,
+    {
+      name: nextName,
+
+      asset_description: nextAssetDescription,
+
+      condition:
+        condition === undefined
+          ? existingAsset.condition
+          : normalizedCondition,
+
+      assetType: nextAssetType,
+
+      categoryId: nextCategoryId,
+      category: nextCategory,
+
+      typeId: nextTypeId,
+      type: nextType,
+
+      nameId: nextNameId,
+
+      normalizedData: nextNormalizedData,
+      newAssetLocation: nextNewAssetLocation,
+
+      quantity: nextQuantity,
+      rawData: nextRawData,
+
+      brand:
+        brand === undefined
+          ? nextAssetType === "vehicle"
+            ? existingAsset.brand
+            : null
+          : nextAssetType === "vehicle"
+            ? brand?.trim() || null
+            : null,
+
+      model:
+        model === undefined
+          ? nextAssetType === "vehicle"
+            ? existingAsset.model
+            : null
+          : nextAssetType === "vehicle"
+            ? model?.trim() || null
+            : null,
+
+      code:
+        code === undefined
+          ? existingAsset.code
+          : normalizedCode,
+
+      manufactureYear:
+        manufactureYear === undefined
+          ? nextAssetType === "vehicle"
+            ? existingAsset.manufactureYear
+            : null
+          : nextAssetType === "vehicle"
+            ? manufactureYear?.trim() || null
+            : null,
+
+      kilometersDriven:
+        kilometersDriven === undefined
+          ? nextAssetType === "vehicle"
+            ? existingAsset.kilometersDriven
+            : null
+          : nextAssetType === "vehicle"
+            ? kilometersDriven?.trim() || null
+            : null,
+
+      hasNotes: normalizedNotes.hasNotes,
+      notes: normalizedNotes.notes,
+
+      isDone:
+        isDone === undefined
+          ? existingAsset.isDone
+          : isDone,
+
+      isPresent:
+        isPresent === undefined
+          ? existingAsset.isPresent
+          : isPresent,
+
+      images: nextImages,
+      voiceNotes: nextVoiceNotes,
+    },
+  );
+
+  await touchProjectSync(
+    existingAsset.projectId,
+    "asset_updated",
+  );
+
+  return {
+    asset: updatedAsset,
+  };
+},
   async getAssetByCode({ userId, projectId, code }) {
     if (!code?.trim()) throw new AppError("Code is required", 400);
 
