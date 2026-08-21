@@ -52,6 +52,15 @@ function extractRawDataKeys(obj, prefix = "", keys = new Set()) {
   return keys;
 }
 
+function normalizeAssetDescription(value) {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+
+  const text = String(value).trim();
+
+  return text || null;
+}
+
 const mapImage = (image) => ({
   id: toId(image._id),
   url: image.url,
@@ -91,6 +100,7 @@ typeId: doc.typeId ?? null,
 type: doc.type ?? null,
 
 nameId: doc.nameId ?? null,
+ asset_description: doc.asset_description ?? null,
 
   condition: doc.condition ?? null,
 
@@ -246,6 +256,7 @@ const normalizeImagesForDb = (images = {}) => ({
 export const assetRepository = {
 async create({
   name,
+   asset_description,
   condition,
   categoryId,
   category,
@@ -292,6 +303,7 @@ const finalRawData = cleanRawData(incomingRawData);
 const normalizedNotes = normalizeNotes(notes);
     const asset = new Asset({
       name,
+      asset_description: asset_description ?? null,
 
        categoryId: categoryId ?? null,
   category: category ?? null,
@@ -428,6 +440,10 @@ async markAssetUsed(assetId) {
 async updateById(assetId, updates) {
   const asset = await Asset.findById(assetId);
   if (!asset) return null;
+    if (updates.asset_description !== undefined) {
+    updates.asset_description =
+      normalizeAssetDescription(updates.asset_description);
+  }
 
   if (updates.notes !== undefined) {
     const normalizedNotes = normalizeNotes(updates.notes);
@@ -620,6 +636,7 @@ async advancedSearchContents({
 
   const matchesSearch =
     !cleanSearch ||
+    advancedValueMatches(asset.code, cleanSearch) ||
     advancedValueMatches(asset.name, cleanSearch) ||
     advancedValueMatches(cleanRawData(asset.rawData), cleanSearch);
 
