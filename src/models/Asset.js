@@ -2,9 +2,8 @@
 
 import mongoose from "mongoose";
 
-// -----------------------------------------------------------------------------
+
 // Media
-// -----------------------------------------------------------------------------
 
 const assetImageSchema = new mongoose.Schema(
   {
@@ -78,20 +77,6 @@ const assetVoiceNoteSchema = new mongoose.Schema(
   },
 );
 
-// -----------------------------------------------------------------------------
-// Structured image slots
-//
-// Vehicle:
-//   plate
-//   details
-//   odometer
-//   other[]
-//
-// Other:
-//   details
-//   brand
-//   other[]
-// -----------------------------------------------------------------------------
 
 const assetImagesSchema = new mongoose.Schema(
   {
@@ -132,9 +117,8 @@ const assetImagesSchema = new mongoose.Schema(
   },
 );
 
-// -----------------------------------------------------------------------------
+
 // Helpers
-// -----------------------------------------------------------------------------
 
 
 const normalizeText = (value) => {
@@ -181,9 +165,8 @@ const toObjectId = (value) => {
   return null;
 };
 
-// -----------------------------------------------------------------------------
+
 // Asset
-// -----------------------------------------------------------------------------
 
 const assetSchema =
   new mongoose.Schema(
@@ -196,9 +179,7 @@ const assetSchema =
         },
       },
 
-      // -----------------------------------------------------------------------
-      // Asset identity
-      // -----------------------------------------------------------------------
+
 
       name: {
         type: String,
@@ -206,6 +187,11 @@ const assetSchema =
         trim: true,
       },
 
+      asset_description: {
+        type: String,
+        default: null,
+        trim: true,
+        },
       condition: {
         type: String,
         default: "Good",
@@ -213,12 +199,6 @@ const assetSchema =
         index: true,
       },
 
-      // -----------------------------------------------------------------------
-      // Main asset classification
-      //
-      // vehicle = current vehicle flow
-      // other   = AssetGallery taxonomy flow
-      // -----------------------------------------------------------------------
 
       assetType: {
         type: String,
@@ -229,19 +209,7 @@ const assetSchema =
         index: true,
       },
 
-      // -----------------------------------------------------------------------
-      // NEW TAXONOMY FIELDS
-      //
-      // These come from AssetGalleryScreen:
-      //
-      // categoryId
-      // category
-      // typeId
-      // type
-      // nameId
-      //
-      // name already exists above and stores the selected/editable asset name.
-      // -----------------------------------------------------------------------
+
 
       categoryId: {
         type: String,
@@ -276,26 +244,13 @@ const assetSchema =
         index: true,
       },
 
-      // -----------------------------------------------------------------------
-      // Legacy / compatibility field
-      //
-      // Existing code still uses subAssetType.
-      //
-      // For "other" assets we will synchronize this with taxonomy `type`
-      // where possible.
-      // -----------------------------------------------------------------------
 
- 
 
       quantity: {
         type: Number,
         default: 1,
         min: 1,
       },
-
-      // -----------------------------------------------------------------------
-      // Vehicle only
-      // -----------------------------------------------------------------------
 
       brand: {
         type: String,
@@ -321,10 +276,7 @@ const assetSchema =
         trim: true,
       },
 
-      // -----------------------------------------------------------------------
-      // General fields
-      // -----------------------------------------------------------------------
-
+   
       code: {
         type: String,
         default: null,
@@ -433,9 +385,6 @@ updatedAt: {
     },
   );
 
-// -----------------------------------------------------------------------------
-// Normalize before validation
-// -----------------------------------------------------------------------------
 
 assetSchema.pre(
   "validate",
@@ -451,10 +400,7 @@ assetSchema.pre(
         ? "vehicle"
         : "other";
 
-    // -------------------------------------------------------------------------
-    // General normalization
-    // -------------------------------------------------------------------------
-
+ 
     const nameText =
       normalizeText(this.name);
 
