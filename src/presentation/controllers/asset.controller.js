@@ -284,6 +284,16 @@ export const folderAssetController = {
   code: req.body.code || null,
   name: req.body.name,
 
+  client_code: normalizeNullableText(
+  req.body.client_code,
+  null,
+),
+
+employer: normalizeNullableText(
+  req.body.employer,
+  null,
+),
+
   categoryId: normalizeNullableText(req.body.categoryId, null),
   category: normalizeNullableText(req.body.category, null),
 
@@ -362,6 +372,22 @@ const result = await folderAssetService.updateAsset({
     req.body.name === undefined
       ? undefined
       : req.body.name,
+
+      client_code:
+  req.body.client_code === undefined
+    ? undefined
+    : normalizeNullableText(
+        req.body.client_code,
+        null,
+      ),
+
+employer:
+  req.body.employer === undefined
+    ? undefined
+    : normalizeNullableText(
+        req.body.employer,
+        null,
+      ),
 
   categoryId:
     req.body.categoryId === undefined
@@ -587,6 +613,16 @@ async getProjectConditions(req, res) {
     userId: req.userId,
     projectId: req.params.projectId,
   });
+
+  return res.status(200).json(result);
+},
+
+async getProjectEmployers(req, res) {
+  const result =
+    await folderAssetService.getProjectEmployers({
+      userId: req.userId,
+      projectId: req.params.projectId,
+    });
 
   return res.status(200).json(result);
 },

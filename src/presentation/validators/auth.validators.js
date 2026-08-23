@@ -195,6 +195,15 @@ const taxonomyStringSchema = z.preprocess(
   nullableStringTrimPreprocess,
   z.string().max(200).optional().nullable()
 );
+const optionalNullableTextSchema = (maxLength, message) =>
+  z.preprocess(
+    nullableStringTrimPreprocess,
+    z
+      .string()
+      .max(maxLength, message)
+      .optional()
+      .nullable()
+  );
 
 export const createFolderSchema = z.object({
   name: z.string().min(1, "Folder name is required"),
@@ -204,6 +213,15 @@ export const createFolderSchema = z.object({
 
 export const createAssetSchema = z.object({
   name: z.string().trim().min(1, "Asset name is required"),
+  client_code: optionalNullableTextSchema(
+  150,
+  "Client code is too long",
+),
+
+employer: optionalNullableTextSchema(
+  300,
+  "Employer is too long",
+),
   categoryId: taxonomyStringSchema,
 category: taxonomyStringSchema,
 
@@ -292,6 +310,15 @@ condition: z.preprocess(
 
 export const updateAssetSchema = z.object({
   name: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
+  client_code: optionalNullableTextSchema(
+  150,
+  "Client code is too long",
+),
+
+employer: optionalNullableTextSchema(
+  300,
+  "Employer is too long",
+),
   categoryId: taxonomyStringSchema,
   category: taxonomyStringSchema,
 
