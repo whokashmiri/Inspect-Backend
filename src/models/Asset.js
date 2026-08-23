@@ -199,6 +199,26 @@ const assetSchema =
         index: true,
       },
 
+      val_tech_id: {
+  type: Number,
+  default: null,
+  immutable: true,
+  min: 1,
+},
+
+client_code: {
+  type: String,
+  default: null,
+  trim: true,
+  index: true,
+},
+
+employer: {
+  type: String,
+  default: null,
+  trim: true,
+  index: true,
+},
 
       assetType: {
         type: String,
@@ -540,6 +560,20 @@ assetSchema.index(
       code: {
         $type: "string",
         $ne: "",
+      },
+    },
+  },
+);
+
+assetSchema.index(
+  {
+    val_tech_id: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      val_tech_id: {
+        $type: "number",
       },
     },
   },
