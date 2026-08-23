@@ -312,6 +312,10 @@ return { folder };
   category,
   typeId,
   type,
+
+  client_code,
+employer,
+
   nameId,
   normalizedData,
 newAssetLocation,
@@ -390,6 +394,15 @@ const assetDescription =
     
     const normalizedCondition = normalizeCondition(condition);
     const normalizedCode = normalizeOptionalString(code);
+    const normalizedClientCode =
+  normalizeOptionalString(
+    client_code,
+  );
+
+const normalizedEmployer =
+  normalizeOptionalString(
+    employer,
+  );
 const incomingRawData =
   rawData && typeof rawData === "object" && !Array.isArray(rawData)
     ? rawData
@@ -424,6 +437,12 @@ const finalRawData = cleanRawData(incomingRawData);
     
    const asset = await assetRepository.create({
   name: normalizedName,
+
+  client_code:
+  normalizedClientCode,
+
+employer:
+  normalizedEmployer,
   asset_description: assetDescription,
   condition: normalizedCondition,
   assetType: normalizedAssetType,
@@ -605,6 +624,9 @@ async updateAsset({
   userId,
   assetId,
   name,
+
+  client_code,
+  employer,
   condition,
 
   categoryId,
@@ -761,6 +783,20 @@ async updateAsset({
         }
       : normalizeNotes(notes);
 
+      const nextClientCode =
+  client_code === undefined
+    ? existingAsset.client_code ?? null
+    : normalizeOptionalString(
+        client_code,
+      );
+
+const nextEmployer =
+  employer === undefined
+    ? existingAsset.employer ?? null
+    : normalizeOptionalString(
+        employer,
+      );
+
   // ---------------------------------------------------------
   // Media
   // ---------------------------------------------------------
@@ -797,6 +833,12 @@ async updateAsset({
       name: nextName,
 
       asset_description: nextAssetDescription,
+
+      client_code:
+      nextClientCode,
+
+      employer:
+      nextEmployer,
 
       condition:
         condition === undefined
@@ -982,6 +1024,38 @@ async advancedGetRawDataKeyValues({ userId, projectId, key }) {
     projectId,
     key,
   });
+},
+
+async getProjectEmployers({
+  userId,
+  projectId,
+}) {
+  const user =
+    await userRepository.findById(
+      userId,
+    );
+
+  if (!user) {
+    throw new AppError(
+      "User not found",
+      404,
+    );
+  }
+
+  await getAccessibleProject(
+    projectId,
+    user,
+  );
+
+  const employers =
+    await assetRepository
+      .getUniqueEmployers(
+        projectId,
+      );
+
+  return {
+    employers,
+  };
 },
 
 
