@@ -64,6 +64,13 @@ router.get(
   authenticate,
   asyncWrap(folderAssetController.getProjectConditions)
 );
+router.get(
+  "/:projectId/assets/employers",
+  authenticate,
+  asyncWrap(
+    folderAssetController.getProjectEmployers,
+  ),
+);
 
 router.get(
   "/:projectId/assets/recent",
