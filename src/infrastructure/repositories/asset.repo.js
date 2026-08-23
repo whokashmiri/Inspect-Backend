@@ -93,6 +93,9 @@ const mapAsset = (doc) => ({
   id: toId(doc._id),
 
   name: doc.name,
+  val_tech_id: doc.val_tech_id ?? null,
+client_code: doc.client_code ?? null,
+employer: doc.employer ?? null,
   categoryId: doc.categoryId ?? null,
 category: doc.category ?? null,
 
@@ -179,6 +182,15 @@ function normalizeQuantity(value) {
   return Math.floor(numberValue);
 }
 
+
+function normalizeOptionalText(value) {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+
+  const text = String(value).trim();
+
+  return text || null;
+}
 function normalizeLocation(value) {
   if (value === undefined) return undefined;
   if (value === null) return null;
@@ -270,6 +282,8 @@ newAssetLocation,
   brand,
   model,
   code,
+  client_code,
+employer,
   rawData,
   notes,
   manufactureYear,
@@ -323,6 +337,11 @@ const normalizedNotes = normalizeNotes(notes);
       normalizedData: finalNormalizedData,
 newAssetLocation: normalizedNewAssetLocation,
       quantity: normalizedQuantity,
+      client_code:
+  normalizeOptionalText(client_code),
+
+employer:
+  normalizeOptionalText(employer),
 
       rawData: finalRawData,
 
@@ -438,6 +457,7 @@ async markAssetUsed(assetId) {
 },
  
 async updateById(assetId, updates) {
+  delete updates.val_tech_id;
   const asset = await Asset.findById(assetId);
   if (!asset) return null;
     if (updates.asset_description !== undefined) {
@@ -508,6 +528,20 @@ if (updates.type !== undefined) {
 if (updates.nameId !== undefined) {
   updates.nameId =
     normalizeTaxonomyValue(updates.nameId);
+}
+
+if (updates.client_code !== undefined) {
+  updates.client_code =
+    normalizeOptionalText(
+      updates.client_code,
+    );
+}
+
+if (updates.employer !== undefined) {
+  updates.employer =
+    normalizeOptionalText(
+      updates.employer,
+    );
 }
 
   Object.keys(updates).forEach((key) => {
@@ -676,7 +710,52 @@ async advancedGetRawDataKeys({ userId, projectId }) {
 },
 
 
+async getUniqueEmployers(projectId) {
+  const assets = await Asset.find({
+    projectId,
+  })
+    .select(
+      "employer normalizedData.employer rawData.employer",
+    )
+    .lean();
 
+  const seen = new Map();
+
+  const addEmployer = (value) => {
+    const text =
+      typeof value === "string"
+        ? value.trim()
+        : "";
+
+    if (!text) return;
+
+    const key =
+      text.toLowerCase();
+
+    if (!seen.has(key)) {
+      seen.set(key, text);
+    }
+  };
+
+  for (const asset of assets) {
+    addEmployer(asset.employer);
+
+    addEmployer(
+      asset?.normalizedData
+        ?.employer,
+    );
+
+    addEmployer(
+      asset?.rawData?.employer,
+    );
+  }
+
+  return Array.from(
+    seen.values(),
+  ).sort((a, b) =>
+    a.localeCompare(b),
+  );
+},
 
 
 
