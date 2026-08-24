@@ -1,6 +1,7 @@
 // infrastructure/repositories/asset.repo.js
-
+import mongoose from "mongoose";
 import { Asset } from "../../models/Asset.js";
+import { AssetSequence } from "../../models/AssetSequence.js";
 
 const toId = (value) => {
   if (!value) return null;
@@ -265,6 +266,53 @@ const normalizeImagesForDb = (images = {}) => ({
     : [],
 });
 
+async function getNextValTechId() {
+  const sequence =
+    await AssetSequence.findOneAndUpdate(
+      { _id: "val_tech_id" },
+      {
+        $inc: {
+          value: 1,
+        },
+      },
+      {
+        new: true,
+      },
+    ).lean();
+
+  if (!sequence) {
+    const error =
+      new Error(
+        'Missing asset sequence: "val_tech_id"',
+      );
+
+    error.code =
+      "ASSET_SEQUENCE_MISSING";
+
+    throw error;
+  }
+
+  const nextValue =
+    Number(sequence.value);
+
+  if (
+    !Number.isSafeInteger(nextValue) ||
+    nextValue < 1
+  ) {
+    const error =
+      new Error(
+        "Invalid val_tech_id sequence value",
+      );
+
+    error.code =
+      "ASSET_SEQUENCE_INVALID";
+
+    throw error;
+  }
+
+  return nextValue;
+}
+
 export const assetRepository = {
 async create({
   name,
@@ -315,6 +363,7 @@ const normalizedNewAssetLocation =
 const finalRawData = cleanRawData(incomingRawData);
 
 const normalizedNotes = normalizeNotes(notes);
+const valTechId = await getNextValTechId();
     const asset = new Asset({
       name,
       asset_description: asset_description ?? null,
@@ -326,6 +375,7 @@ const normalizedNotes = normalizeNotes(notes);
   type: type ?? null,
 
   nameId: nameId ?? null,
+  asset_source: "تطبيق",
      
       condition: normalizeCondition(condition) ?? "Good",
       assetType: assetType || "other",
@@ -337,6 +387,7 @@ const normalizedNotes = normalizeNotes(notes);
       normalizedData: finalNormalizedData,
 newAssetLocation: normalizedNewAssetLocation,
       quantity: normalizedQuantity,
+      val_tech_id: valTechId,
       client_code:
   normalizeOptionalText(client_code),
 
@@ -344,6 +395,7 @@ employer:
   normalizeOptionalText(employer),
 
       rawData: finalRawData,
+      
 
   updatedAt:
     new Date(),
@@ -395,41 +447,130 @@ notes: normalizedNotes.notes,
     return assets.map(mapAsset);
   },
 
-  async getRecentAssets(
+async getRecentAssets(
   projectId,
   limit = 20,
 ) {
   const safeLimit = Math.min(
-    Math.max(
-      Number(limit) || 20,
-      1,
-    ),
+    Math.max(Number(limit) || 20, 1),
     30,
   );
 
-  const assets =
-    await Asset.find({
-      projectId,
-      assetType: "other",
+  const objectProjectId =
+    mongoose.Types.ObjectId.isValid(projectId)
+      ? new mongoose.Types.ObjectId(projectId)
+      : null;
 
-      updatedAt: {
-        $ne: null,
+  if (!objectProjectId) {
+    return [];
+  }
+
+
+  const recentRows = await Asset.aggregate([
+    {
+      $match: {
+        projectId: objectProjectId,
+        assetType: "other",
+
+        updatedAt: {
+          $type: "date",
+        },
+
+        name: {
+          $type: "string",
+          $ne: "",
+        },
       },
-    })
-      .sort({
-        updatedAt: -1,
-        updatedAt: -1,
-      })
-      .limit(safeLimit)
-      .populate(
-        "createdBy",
-        "fullName email role",
-      )
-      .lean();
+    },
 
-  return assets.map(mapAsset);
+    {
+      $set: {
+        recentNameKey: {
+          $toLower: {
+            $trim: {
+              input: "$name",
+            },
+          },
+        },
+      },
+    },
+
+    {
+      $match: {
+        recentNameKey: {
+          $ne: "",
+        },
+      },
+    },
+
+    {
+      $sort: {
+        updatedAt: -1,
+        _id: -1,
+      },
+    },
+
+  
+    {
+      $group: {
+        _id: "$recentNameKey",
+
+        assetId: {
+          $first: "$_id",
+        },
+
+        latestUpdatedAt: {
+          $first: "$updatedAt",
+        },
+      },
+    },
+
+ 
+    {
+      $sort: {
+        latestUpdatedAt: -1,
+        assetId: -1,
+      },
+    },
+
+    {
+      $limit: safeLimit,
+    },
+  ]);
+
+  if (!recentRows.length) {
+    return [];
+  }
+
+  const assetIds =
+    recentRows.map((row) => row.assetId);
+
+ 
+  const assets = await Asset.find({
+    _id: {
+      $in: assetIds,
+    },
+  })
+    .populate(
+      "createdBy",
+      "fullName email role",
+    )
+    .lean();
+
+  const assetsById = new Map(
+    assets.map((asset) => [
+      String(asset._id),
+      asset,
+    ]),
+  );
+
+  return assetIds
+    .map((id) =>
+      assetsById.get(String(id)),
+    )
+    .filter(Boolean)
+    .map(mapAsset);
 },
-
 
 async markAssetUsed(assetId) {
   const asset =
