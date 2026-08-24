@@ -206,6 +206,13 @@ const assetSchema =
   min: 1,
 },
 
+asset_source: {
+  type: String,
+  default: null,
+  trim: true,
+  index: true,
+},
+
 client_code: {
   type: String,
   default: null,
