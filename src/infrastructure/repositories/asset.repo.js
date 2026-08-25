@@ -139,6 +139,7 @@ newAssetLocation: doc.newAssetLocation ?? null,
   updatedAt: doc.updatedAt ?? null,
 
   createdBy: mapCreatedBy(doc.createdBy),
+  updatedBy: mapCreatedBy(doc.updatedBy),
 
   images: mapImages(doc.images || {}),
   voiceNotes: (doc.voiceNotes || []).map(mapVoiceNote),
@@ -421,7 +422,7 @@ notes: normalizedNotes.notes,
     });
 
     await asset.save();
-    await asset.populate("createdBy", "fullName email role");
+    await asset.populate("createdBy updatedBy", "fullName email role");
 
     return mapAsset(asset.toObject());
   },
@@ -580,6 +581,7 @@ async markAssetUsed(assetId) {
         $set: {
           updatedAt:
             new Date(),
+            updatedBy: userId,
         },
       },
       {
@@ -587,7 +589,7 @@ async markAssetUsed(assetId) {
       },
     )
       .populate(
-        "createdBy",
+        "createdBy updatedBy",
         "fullName email role",
       )
       .lean();
