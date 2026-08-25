@@ -480,6 +480,7 @@ newAssetLocation: normalizedNewAssetLocation,
 
   isAssetFolder: true,
   createdBy: user.id || user._id,
+  updatedBy: user.id || user._id,
 });
 
     await touchProjectSync(projectId, "asset_created");
@@ -917,6 +918,7 @@ const nextEmployer =
 
       images: nextImages,
       voiceNotes: nextVoiceNotes,
+      updatedBy: user.id || user._id,
     },
   );
 
