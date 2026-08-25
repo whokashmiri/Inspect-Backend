@@ -373,6 +373,13 @@ updatedAt: {
         index: true,
       },
 
+      updatedBy: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User",
+  default: null,
+  index: true,
+},
+
       // -----------------------------------------------------------------------
       // Media
       // -----------------------------------------------------------------------
