@@ -180,9 +180,7 @@ function sanitizeImagesPartial(images) {
   }
 
   const result = {};
-if ("main" in images) {
-  result.main = sanitizeSingleImage(images.main);
-}
+  if ("main" in images) {result.main = sanitizeSingleImage(images.main);}
   if ("plate" in images) result.plate = sanitizeSingleImage(images.plate);
   if ("details" in images) result.details = sanitizeSingleImage(images.details);
   if ("odometer" in images) result.odometer = sanitizeSingleImage(images.odometer);
@@ -203,7 +201,7 @@ function buildFullImages(images) {
   const partial = sanitizeImagesPartial(images);
 
   return {
-     main: partial.main ?? null,
+    main: partial.main ?? null,
     plate: partial.plate ?? null,
     details: partial.details ?? null,
     odometer: partial.odometer ?? null,
@@ -314,11 +312,11 @@ return { folder };
   type,
 
   client_code,
-employer,
+  employer,
 
   nameId,
   normalizedData,
-newAssetLocation,
+  newAssetLocation,
   quantity,
   rawData,
   brand,
