@@ -127,20 +127,17 @@ const mapProject = (doc, stats = emptyStats) => {
     reportData: doc.reportData ?? {},
     isFavorite: doc.isFavorite ?? false,
 
-inspectionLocation:
-  doc.inspectionLocation ||
-  doc.reportData?.inspectionLocation ||
-  "",
+    inspectionLocation:
+      doc.inspectionLocation ||
+      doc.reportData?.inspectionLocation || "",
 
-inspectionMapUrl:
-  doc.inspectionMapUrl ||
-  doc.reportData?.inspectionMapUrl ||
-  "",
+    inspectionMapUrl:
+      doc.inspectionMapUrl ||
+      doc.reportData?.inspectionMapUrl || "",
 
-inspectionDate:
-  doc.inspectionDate ??
-  doc.reportData?.inspectionDate ??
-  null,
+    inspectionDate:
+      doc.inspectionDate ??
+      doc.reportData?.inspectionDate ?? null,
 
     locations,
 
