@@ -136,7 +136,7 @@ newAssetLocation: doc.newAssetLocation ?? null,
   createdAt: doc.createdAt,
   updatedAt: doc.updatedAt,
 
-  updatedAt: doc.updatedAt ?? null,
+  // updatedAt: doc.updatedAt ?? null,
 
   createdBy: mapCreatedBy(doc.createdBy),
   updatedBy: mapCreatedBy(doc.updatedBy),
@@ -326,13 +326,13 @@ async create({
   nameId,
   assetType,
   normalizedData,
-newAssetLocation,
+  newAssetLocation,
   quantity,
   brand,
   model,
   code,
   client_code,
-employer,
+  employer,
   rawData,
   notes,
   manufactureYear,
@@ -344,6 +344,7 @@ employer,
   projectId,
   parent,
   createdBy,
+  updatedBy,
 }) {
 
 const incomingRawData =
@@ -369,14 +370,14 @@ const valTechId = await getNextValTechId();
       name,
       asset_description: asset_description ?? null,
 
-       categoryId: categoryId ?? null,
-  category: category ?? null,
+      categoryId: categoryId ?? null,
+      category: category ?? null,
 
-  typeId: typeId ?? null,
-  type: type ?? null,
+      typeId: typeId ?? null,
+      type: type ?? null,
 
-  nameId: nameId ?? null,
-  asset_source: "تطبيق",
+      nameId: nameId ?? null,
+      asset_source: "تطبيق",
      
       condition: normalizeCondition(condition) ?? "Good",
       assetType: assetType || "other",
@@ -386,18 +387,17 @@ const valTechId = await getNextValTechId();
       manufactureYear: manufactureYear ?? null,
       kilometersDriven: kilometersDriven ?? null,
       normalizedData: finalNormalizedData,
-newAssetLocation: normalizedNewAssetLocation,
+      newAssetLocation: normalizedNewAssetLocation,
       quantity: normalizedQuantity,
       val_tech_id: valTechId,
       client_code:
-  normalizeOptionalText(client_code),
+      normalizeOptionalText(client_code),
 
-employer:
-  normalizeOptionalText(employer),
+      employer:normalizeOptionalText(employer),
 
       rawData: finalRawData,
       
-
+  updatedBy,
   updatedAt:
     new Date(),
 
@@ -431,7 +431,7 @@ notes: normalizedNotes.notes,
 
   async findById(assetId) {
     const asset = await Asset.findById(assetId)
-      .populate("createdBy", "fullName email role")
+      .populate("createdBy updatedBy", "fullName email role")
       .lean();
 
     return asset ? mapAsset(asset) : null;
@@ -442,7 +442,7 @@ notes: normalizedNotes.notes,
       projectId,
     })
       .sort({ createdAt: 1 })
-      .populate("createdBy", "fullName email role")
+      .populate("createdBy updatedBy", "fullName email role")
       .lean();
 
     return assets.map(mapAsset);
@@ -553,7 +553,7 @@ async getRecentAssets(
     },
   })
     .populate(
-      "createdBy",
+      "createdBy updatedBy",
       "fullName email role",
     )
     .lean();
@@ -581,7 +581,6 @@ async markAssetUsed(assetId) {
         $set: {
           updatedAt:
             new Date(),
-            updatedBy: userId,
         },
       },
       {
@@ -694,7 +693,7 @@ if (updates.employer !== undefined) {
   });
 
   await asset.save();
-  await asset.populate("createdBy", "fullName email role");
+  await asset.populate("createdBy updatedBy", "fullName email role");
 
   return mapAsset(asset.toObject());
 },
@@ -720,7 +719,7 @@ if (updates.employer !== undefined) {
       parent,
     })
       .sort({ createdAt: -1 })
-      .populate("createdBy", "fullName email  role")
+      .populate("createdBy updatedBy", "fullName email  role")
       .lean();
 
     return assets.map(mapAsset);
@@ -732,7 +731,7 @@ if (updates.employer !== undefined) {
       name: { $regex: search, $options: "i" },
     })
       .sort({ createdAt: -1 })
-      .populate("createdBy", "fullName email  role")
+      .populate("createdBy updatedBy", "fullName email  role")
       .lean();
 
     return assets.map(mapAsset);
@@ -791,7 +790,7 @@ async advancedSearchContents({
 
   const assets = await Asset.find(query)
     .sort({ createdAt: -1 })
-    .populate("createdBy", "fullName email  role")
+    .populate("createdBy updatedBy", "fullName email  role")
     .lean();
 
  const matchedAssets = assets.filter((asset) => {
