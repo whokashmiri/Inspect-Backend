@@ -114,15 +114,6 @@ const normalizeOptionalText = (value, fallback = undefined) => {
   return text || fallback;
 };
 
-// --- Image helpers -----------------------------------------------------
-// The Asset model now stores images as a structured object instead of a
-// flat array:
-//   Vehicle assets: { plate, details, odometer, other[] }
-//   Other assets:   { details, brand, other[] }
-// Slots that don't apply to the asset's assetType are cleared automatically
-// by the model's pre("validate") hook, so the controller doesn't need to
-// know the assetType to normalize incoming image data — it just sanitizes
-// whichever slots were sent.
 
 const normalizeSingleImage = (value) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -149,14 +140,6 @@ const normalizeImageArray = (value) => {
   return value.map(normalizeSingleImage).filter(Boolean);
 };
 
-// Accepts the new structured shape: { plate, details, odometer, brand, other }
-// For backward compatibility, if a plain array is sent (old format), it is
-// treated as the "other" slot so existing clients don't hard-break.
-//
-// On create: pass fallback = {} so a brand-new asset always gets a fully
-// shaped images object.
-// On update: pass fallback = undefined so omitting "images" leaves existing
-// images untouched.
 const normalizeImages = (value, fallback = undefined) => {
   if (value === undefined) return fallback;
 
