@@ -104,13 +104,7 @@ const uploadedImageSchema = z.object({
   thumbnailUrl: z.string().url("Invalid thumbnail URL").optional().nullable(),
 });
 
-// Structured images payload:
-//   Vehicle assets use: plate, details, odometer, other[]
-//   Other assets use:   details, brand, other[]
-// Every single-image slot is nullable (null = explicitly clear that slot).
-// Slots that don't apply to the asset's assetType are ignored/cleared
-// downstream by the model, so this schema stays permissive about which
-// slots are present — it just validates shape, not asset-type relevance.
+
 const assetImagesObjectSchema = z.object({
   main: uploadedImageSchema.optional().nullable(),
   plate: uploadedImageSchema.optional().nullable(),
@@ -120,9 +114,7 @@ const assetImagesObjectSchema = z.object({
   other: z.array(uploadedImageSchema).optional(),
 });
 
-// Accepts the new structured object, or (for backward compatibility with
-// older clients) a plain array — which the controller treats as the
-// "other" slot.
+
 const assetImagesPayloadSchema = z.union([
   assetImagesObjectSchema,
   z.array(uploadedImageSchema),
