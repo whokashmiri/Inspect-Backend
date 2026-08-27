@@ -506,7 +506,7 @@ async getRecentAssets(
 
     {
       $sort: {
-        updatedAt: -1,
+        updatedAt: 1,
         _id: -1,
       },
     },
