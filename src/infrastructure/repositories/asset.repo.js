@@ -450,12 +450,26 @@ notes: normalizedNotes.notes,
 
 async getRecentAssets(
   projectId,
-  limit = 20,
+  {
+    page = 1,
+    limit = 10,
+  } = {},
 ) {
-  const safeLimit = Math.min(
-    Math.max(Number(limit) || 20, 1),
-    30,
-  );
+ const safePage = Math.max(
+  Number(page) || 1,
+  1,
+);
+
+const safeLimit = Math.min(
+  Math.max(
+    Number(limit) || 10,
+    1,
+  ),
+  30,
+);
+
+const skip =
+  (safePage - 1) * safeLimit;
 
   const objectProjectId =
     mongoose.Types.ObjectId.isValid(projectId)
@@ -467,7 +481,7 @@ async getRecentAssets(
   }
 
 
-  const recentRows = await Asset.aggregate([
+  const  result = await Asset.aggregate([
     {
       $match: {
         projectId: objectProjectId,
@@ -534,14 +548,48 @@ async getRecentAssets(
       },
     },
 
-    {
-      $limit: safeLimit,
-    },
+   {
+  $facet: {
+    metadata: [
+      {
+        $count: "total",
+      },
+    ],
+
+    rows: [
+      {
+        $skip: skip,
+      },
+      {
+        $limit: safeLimit,
+      },
+    ],
+  },
+},
   ]);
 
-  if (!recentRows.length) {
-    return [];
-  }
+ const facet =
+  result?.[0] || {};
+
+const recentRows =
+  Array.isArray(facet.rows)
+    ? facet.rows
+    : [];
+
+const total =
+  Number(
+    facet.metadata?.[0]?.total || 0,
+  );
+
+if (!recentRows.length) {
+  return {
+    assets: [],
+    page: safePage,
+    limit: safeLimit,
+    total,
+    hasMore: false,
+  };
+}
 
   const assetIds =
     recentRows.map((row) => row.assetId);
@@ -565,12 +613,33 @@ async getRecentAssets(
     ]),
   );
 
-  return assetIds
+  const mappedAssets =
+  assetIds
     .map((id) =>
-      assetsById.get(String(id)),
+      assetsById.get(
+        String(id),
+      ),
     )
     .filter(Boolean)
     .map(mapAsset);
+
+return {
+  assets:
+    mappedAssets,
+
+  page:
+    safePage,
+
+  limit:
+    safeLimit,
+
+  total,
+
+  hasMore:
+    skip +
+      mappedAssets.length <
+    total,
+};
 },
 
 async markAssetUsed(assetId) {
