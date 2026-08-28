@@ -575,12 +575,12 @@ async getRecentAssets(req, res) {
     await folderAssetService.getRecentAssets({
       userId: req.userId,
       projectId: req.params.projectId,
-      limit: Number(req.query.limit || 8),
+      page: Number(req.query.page || 1),
+      limit: Number(req.query.limit || 15),
     });
 
   return res.status(200).json(result);
 },
-
 async markAssetUsed(req, res) {
   const result =
     await folderAssetService.markAssetUsed({
