@@ -515,7 +515,8 @@ newAssetLocation: normalizedNewAssetLocation,
 async getRecentAssets({
   userId,
   projectId,
-  limit,
+  page = 1,
+  limit = 15,
 }) {
   const user =
     await userRepository.findById(
@@ -534,15 +535,13 @@ async getRecentAssets({
     user,
   );
 
-  const assets =
-    await assetRepository.getRecentAssets(
-      projectId,
-      limit,
-    );
-
-  return {
-    assets,
-  };
+ return assetRepository.getRecentAssets(
+  projectId,
+  {
+    page,
+    limit,
+  },
+);
 },
 
 async markAssetUsed({
