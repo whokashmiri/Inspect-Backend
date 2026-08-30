@@ -44,4 +44,49 @@ export const assetCategoryController = {
       names,
     });
   },
+
+  async createCategory(req, res) {
+  const category =
+    await assetCategoryService
+      .createCategory({
+        label:
+          req.body.label,
+      });
+
+  return res.status(201).json({
+    category,
+  });
+},
+
+async createType(req, res) {
+  const type =
+    await assetCategoryService
+      .createType({
+        categoryId:
+          req.params.categoryId,
+
+        label:
+          req.body.label,
+      });
+
+  return res.status(201).json({
+    type,
+  });
+},
+
+async createName(req, res) {
+  const name =
+    await assetCategoryService
+      .createName({
+        typeId:
+          req.params.typeId,
+
+        label:
+          req.body.label,
+      });
+
+  return res.status(201).json({
+    name,
+  });
+},
 };
