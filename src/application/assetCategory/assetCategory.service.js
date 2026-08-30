@@ -1,4 +1,5 @@
 import { assetCategoryRepository } from "../../infrastructure/repositories/assetCategory.repo.js";
+import crypto from "crypto";
 
 export const assetCategoryService = {
  async getAll() {
@@ -137,4 +138,183 @@ export const assetCategoryService = {
       name,
     };
   },
+
+  async createCategory({
+  label,
+}) {
+  const cleanLabel =
+    String(label || "").trim();
+
+  if (!cleanLabel) {
+    throw new Error(
+      "Category label is required",
+    );
+  }
+
+  const existing =
+    await assetCategoryRepository
+      .findCategories();
+
+  const duplicate =
+    existing.find(
+      (item) =>
+        item.label
+          .trim()
+          .toLowerCase() ===
+        cleanLabel.toLowerCase(),
+    );
+
+  if (duplicate) {
+    return duplicate;
+  }
+
+  const category =
+    await assetCategoryRepository
+      .addCategory({
+        id: crypto.randomUUID(),
+        label: cleanLabel,
+      });
+
+  if (!category) {
+    throw new Error(
+      "Asset category document not found",
+    );
+  }
+
+  return category;
+},
+
+async createType({
+  categoryId,
+  label,
+}) {
+  const cleanLabel =
+    String(label || "").trim();
+
+  if (!categoryId) {
+    throw new Error(
+      "categoryId is required",
+    );
+  }
+
+  if (!cleanLabel) {
+    throw new Error(
+      "Type label is required",
+    );
+  }
+
+  const category =
+    await assetCategoryRepository
+      .findCategoryById(
+        categoryId,
+      );
+
+  if (!category) {
+    throw new Error(
+      "Category not found",
+    );
+  }
+
+  const existing =
+    await assetCategoryRepository
+      .findTypesByCategoryId(
+        categoryId,
+      );
+
+  const duplicate =
+    existing.find(
+      (item) =>
+        item.label
+          .trim()
+          .toLowerCase() ===
+        cleanLabel.toLowerCase(),
+    );
+
+  if (duplicate) {
+    return duplicate;
+  }
+
+  const type =
+    await assetCategoryRepository
+      .addType({
+        id: crypto.randomUUID(),
+        categoryId,
+        label: cleanLabel,
+      });
+
+  if (!type) {
+    throw new Error(
+      "Could not create type",
+    );
+  }
+
+  return type;
+},
+
+async createName({
+  typeId,
+  label,
+}) {
+  const cleanLabel =
+    String(label || "").trim();
+
+  if (!typeId) {
+    throw new Error(
+      "typeId is required",
+    );
+  }
+
+  if (!cleanLabel) {
+    throw new Error(
+      "Name label is required",
+    );
+  }
+
+  const type =
+    await assetCategoryRepository
+      .findTypeById(
+        typeId,
+      );
+
+  if (!type) {
+    throw new Error(
+      "Type not found",
+    );
+  }
+
+  const existing =
+    await assetCategoryRepository
+      .findNamesByTypeId(
+        typeId,
+      );
+
+  const duplicate =
+    existing.find(
+      (item) =>
+        item.label
+          .trim()
+          .toLowerCase() ===
+        cleanLabel.toLowerCase(),
+    );
+
+  if (duplicate) {
+    return duplicate;
+  }
+
+  const name =
+    await assetCategoryRepository
+      .addName({
+        id: crypto.randomUUID(),
+        typeId,
+        label: cleanLabel,
+      });
+
+  if (!name) {
+    throw new Error(
+      "Could not create asset name",
+    );
+  }
+
+  return name;
+},
 };
