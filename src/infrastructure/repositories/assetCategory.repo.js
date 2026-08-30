@@ -198,4 +198,113 @@ async findTypesByCategoryId(categoryId, options = {}) {
 
     return mapName(name);
   },
+
+
+
+
+  async addCategory({
+  id,
+  label,
+}) {
+  const document =
+    await AssetCategory.findOneAndUpdate(
+      {},
+      {
+        $push: {
+          categories: {
+            id,
+            label,
+          },
+        },
+      },
+      {
+        new: true,
+      },
+    ).lean();
+
+  if (!document) {
+    return null;
+  }
+
+  const category =
+    document.categories?.find(
+      (item) => item.id === id,
+    );
+
+  return mapCategory(category);
+},
+
+async addType({
+  id,
+  categoryId,
+  label,
+}) {
+  const document =
+    await AssetCategory.findOneAndUpdate(
+      {
+        "categories.id":
+          categoryId,
+      },
+      {
+        $push: {
+          types: {
+            id,
+            categoryId,
+            label,
+          },
+        },
+      },
+      {
+        new: true,
+      },
+    ).lean();
+
+  if (!document) {
+    return null;
+  }
+
+  const type =
+    document.types?.find(
+      (item) => item.id === id,
+    );
+
+  return mapType(type);
+},
+
+async addName({
+  id,
+  typeId,
+  label,
+}) {
+  const document =
+    await AssetCategory.findOneAndUpdate(
+      {
+        "types.id":
+          typeId,
+      },
+      {
+        $push: {
+          names: {
+            id,
+            typeId,
+            label,
+          },
+        },
+      },
+      {
+        new: true,
+      },
+    ).lean();
+
+  if (!document) {
+    return null;
+  }
+
+  const name =
+    document.names?.find(
+      (item) => item.id === id,
+    );
+
+  return mapName(name);
+},
 };
