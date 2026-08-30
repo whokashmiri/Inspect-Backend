@@ -663,10 +663,10 @@ async updateAsset({
 
   await getAccessibleProject(existingAsset.projectId, user);
 
-  const currentUserId = String(user.id || user._id);
-  const assetCreatorId = existingAsset.createdBy?.id?.toString();
+  // const currentUserId = String(user.id || user._id);
+  // const assetCreatorId = existingAsset.createdBy?.id?.toString();
 
-  const isCreator = assetCreatorId === currentUserId;
+  // const isCreator = assetCreatorId === currentUserId;
 
   // ---------------------------------------------------------
   // Asset type
@@ -681,12 +681,10 @@ async updateAsset({
   // Final name
   // ---------------------------------------------------------
 
-  const nextName =
-    !isCreator
-      ? existingAsset.name
-      : name === undefined
-        ? existingAsset.name
-        : name?.trim() || existingAsset.name;
+const nextName =
+  name === undefined
+    ? existingAsset.name
+    : name?.trim() || existingAsset.name;
 
   // ---------------------------------------------------------
   // Taxonomy
