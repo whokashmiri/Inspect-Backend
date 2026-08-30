@@ -36,6 +36,33 @@ router.get(
   asyncWrap(assetCategoryController.getNamesByTypeId)
 );
 
+router.post(
+  "/categories",
+  authenticate,
+  asyncWrap(
+    assetCategoryController
+      .createCategory,
+  ),
+);
+
+router.post(
+  "/categories/:categoryId/types",
+  authenticate,
+  asyncWrap(
+    assetCategoryController
+      .createType,
+  ),
+);
+
+router.post(
+  "/types/:typeId/names",
+  authenticate,
+  asyncWrap(
+    assetCategoryController
+      .createName,
+  ),
+);
+
 
 function asyncWrap(fn) {
   return (req, res, next) =>
