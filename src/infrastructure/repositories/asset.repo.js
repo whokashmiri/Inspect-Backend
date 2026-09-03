@@ -441,7 +441,7 @@ notes: normalizedNotes.notes,
     const assets = await Asset.find({
       projectId,
     })
-      .sort({ createdAt: 1 })
+      .sort({ createdAt: 1 ,  updatedAt: -1, })
       .populate("createdBy updatedBy", "fullName email role")
       .lean();
 
@@ -787,7 +787,7 @@ if (updates.employer !== undefined) {
       projectId,
       parent,
     })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1 , updatedAt: -1, })
       .populate("createdBy updatedBy", "fullName email  role")
       .lean();
 
@@ -799,7 +799,7 @@ if (updates.employer !== undefined) {
       projectId,
       name: { $regex: search, $options: "i" },
     })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1 , updatedAt: -1, })
       .populate("createdBy updatedBy", "fullName email  role")
       .lean();
 
