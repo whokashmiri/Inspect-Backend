@@ -22,8 +22,7 @@ export async function sendAuthenticaOtp({ phone }) {
   }
 
   if (process.env.DEV_OTP_BYPASS === "true") {
-    console.log("DEV OTP BYPASS");
-    console.log("Phone:", phone);
+   
 
     return {
       success: true,
@@ -50,7 +49,7 @@ export async function sendAuthenticaOtp({ phone }) {
   const data = await response.json().catch(() => null);
 
   if (!response.ok || data?.success === false) {
-    console.error("Authentica send OTP error:", data);
+    
 
     throw new AppError(data?.message || "Failed to send OTP SMS", 502);
   }
