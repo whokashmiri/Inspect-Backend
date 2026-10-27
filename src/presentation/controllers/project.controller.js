@@ -21,13 +21,16 @@ export const projectController = {
     return res.status(200).json(result);
   },
 
-  async list(req, res) {
-    const result = await projectService.list(req.userId, {
-      companyId: req.query.companyId,
-    });
+ 
+async list(req, res) {
+  const result = await projectService.list(req.userId, {
+    companyId: req.query.companyId,
+    search: req.query.search,
+  });
 
-    return res.status(200).json(result);
-  },
+  return res.status(200).json(result);
+},
+
 
   async offlineManifest(req, res) {
     const result = await projectService.offlineManifest({
