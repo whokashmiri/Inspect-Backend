@@ -78,55 +78,100 @@ export const projectService = {
     return { project };
   },
 
-  async list(userId, filters = {}) {
-    const user = await userRepository.findById(userId);
-    if (!user) throw new AppError("User not found", 404);
+ 
+async list(userId, filters = {}) {
+  const user = await userRepository.findById(userId);
 
-    const requestedCompanyId = filters.companyId
-      ? String(filters.companyId)
-      : null;
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
 
-    const userCompanyId = user.company?.id || user.company?._id;
+  const requestedCompanyId = filters.companyId
+    ? String(filters.companyId)
+    : null;
 
-    const companyProjects = userCompanyId
-      ? await projectRepository.findByCompanyId(userCompanyId)
-      : [];
+  // Search by project name
+  if (
+    filters.search !== undefined &&
+    typeof filters.search !== "string"
+  ) {
+    throw new AppError("Search must be a string", 400);
+  }
 
-    const inspectorProjects = await projectRepository.findByInspectorUserId(
+  const search = (filters.search || "").trim();
+
+  if (search.length > 100) {
+    throw new AppError(
+      "Search must not exceed 100 characters",
+      400
+    );
+  }
+
+  const userCompanyId =
+    user.company?.id || user.company?._id;
+
+  // Keep existing company and inspector access
+  const companyProjects = userCompanyId
+    ? await projectRepository.findByCompanyId(userCompanyId)
+    : [];
+
+  const inspectorProjects =
+    await projectRepository.findByInspectorUserId(
       user.id || user._id
     );
 
-    const map = new Map();
+  // Remove duplicate projects
+  const map = new Map();
 
-    [...companyProjects, ...inspectorProjects].forEach((project) => {
-      map.set(String(project.id || project._id), project);
-    });
-
-    let projects = Array.from(map.values());
-
-    if (requestedCompanyId) {
-      projects = projects.filter(
-        (project) => String(project.companyId) === requestedCompanyId
+  [...companyProjects, ...inspectorProjects].forEach(
+    (project) => {
+      map.set(
+        String(project.id || project._id),
+        project
       );
     }
+  );
 
-    const companiesMap = new Map();
+  let projects = Array.from(map.values());
 
-    projects.forEach((project) => {
-      if (!project.companyId) return;
+  // Filter by company
+  if (requestedCompanyId) {
+    projects = projects.filter(
+      (project) =>
+        String(project.companyId) === requestedCompanyId
+    );
+  }
 
-      companiesMap.set(String(project.companyId), {
-        id: String(project.companyId),
-        name: project.company?.name || "",
-      });
+  // Search by project name
+  if (search) {
+    const normalizedSearch = search.toLocaleLowerCase();
+
+    projects = projects.filter((project) =>
+      String(project.name || "")
+        .toLocaleLowerCase()
+        .includes(normalizedSearch)
+    );
+  }
+
+  // Preserve existing companies response
+  const companiesMap = new Map();
+
+  projects.forEach((project) => {
+    if (!project.companyId) return;
+
+    companiesMap.set(String(project.companyId), {
+      id: String(project.companyId),
+      name: project.company?.name || "",
     });
+  });
 
-    return {
-      projects,
-      companies: Array.from(companiesMap.values()),
-      selectedCompanyId: requestedCompanyId,
-    };
-  },
+  return {
+    projects,
+    companies: Array.from(companiesMap.values()),
+    selectedCompanyId: requestedCompanyId,
+  };
+},
+
 
   async updateInspectionDetails({
   userId,

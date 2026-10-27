@@ -241,6 +241,11 @@ notPresentAssets: {
   }, {});
 }
 
+
+const escapeSearchRegex = (value) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+
 export const projectRepository = {
 
 
@@ -492,4 +497,43 @@ async updateById(id, update) {
     const statsMap = await getStatsMap([projectId]);
     return statsMap[projectId] ?? emptyStats;
   },
+
+
+  
+async searchByName(companyId, search = "") {
+  if (!companyId || !mongoose.Types.ObjectId.isValid(companyId)) {
+    return [];
+  }
+
+  const filter = { companyId };
+
+  const searchTerm = String(search ?? "").trim();
+
+  if (searchTerm) {
+    filter.name = {
+      $regex: escapeSearchRegex(searchTerm),
+      $options: "i",
+    };
+  }
+
+  const query = Project.find(filter).sort({
+    updatedAt: -1,
+  });
+
+  const projects = await populateProjectQuery(query).lean();
+
+  const ids = projects.map((project) =>
+    project._id.toString()
+  );
+
+  const statsMap = await getStatsMap(ids);
+
+  return projects.map((project) =>
+    mapProject(
+      project,
+      statsMap[project._id.toString()] ?? emptyStats
+    )
+  );
+},
+
 };
